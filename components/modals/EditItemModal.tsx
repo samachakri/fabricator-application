@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { InventoryItem } from '@/lib/types';
-import { X, Edit3, Trash2, CheckCircle2, Tag, Layers } from 'lucide-react';
+import { X, Edit3, Trash2, CheckCircle2 } from 'lucide-react';
 
 interface EditItemModalProps {
   isOpen: boolean;
@@ -172,24 +172,17 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
 
               {/* Brand Name */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Brand Name *</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Brand Name *
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
                     required
-                    list="edit-brand-suggestions"
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
-                  <datalist id="edit-brand-suggestions">
-                    {brands.map((b) => (
-                      <option key={b} value={b} />
-                    ))}
-                  </datalist>
 
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>
@@ -213,24 +206,17 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
 
               {/* Series Classification */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Series Name (Optional)</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Series Name (Optional)
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
-                    list="edit-series-suggestions"
                     value={seriesClassification}
                     onChange={(e) => setSeriesClassification(e.target.value)}
                     placeholder="Enter series name or leave blank (Optional)..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
-                  <datalist id="edit-series-suggestions">
-                    {seriesPresets.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
 
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                     <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>

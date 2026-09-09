@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { InventoryItem } from '@/lib/types';
-import { X, Plus, CheckCircle2, Layers, Tag, DollarSign, Box } from 'lucide-react';
+import { X, Plus, CheckCircle2, DollarSign, Box } from 'lucide-react';
 
 interface AddInventoryModalProps {
   isOpen: boolean;
@@ -187,25 +187,18 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
 
               {/* Brand Name Input */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Brand Name *</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Brand Name *
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
                     required
-                    list="brand-suggestions-list"
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
                     placeholder="Enter brand name (e.g. VEKA, Kommerling, Prominance)..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
-                  <datalist id="brand-suggestions-list">
-                    {brands.map((b) => (
-                      <option key={b} value={b} />
-                    ))}
-                  </datalist>
 
                   {/* Quick-click registered brand pills */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
@@ -230,24 +223,17 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
 
               {/* Series Name (Optional) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Series Name (Optional)</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Series Name (Optional)
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
-                    list="series-suggestions-list"
                     value={seriesClassification}
                     onChange={(e) => setSeriesClassification(e.target.value)}
                     placeholder="Enter series name or leave blank (e.g. Casement, Sliding)..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
-                  <datalist id="series-suggestions-list">
-                    {seriesPresets.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
 
                   {/* Quick-click suggestion chips */}
                   <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
@@ -440,7 +426,7 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Profiles to Stock</span>
+                <span>Add Item to Stock</span>
               </button>
             </div>
           </form>
