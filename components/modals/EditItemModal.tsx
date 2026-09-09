@@ -12,11 +12,13 @@ interface EditItemModalProps {
 }
 
 export default function EditItemModal({ isOpen, onClose, item }: EditItemModalProps) {
-  const { updateInventoryItem, deleteInventoryItem } = useStore();
+  const { updateInventoryItem, deleteInventoryItem, brands, addBrand } = useStore();
 
   const [name, setName] = useState('');
   const [specSubtitle, setSpecSubtitle] = useState('');
   const [brandName, setBrandName] = useState('');
+  const [isAddingNewBrand, setIsAddingNewBrand] = useState(false);
+  const [newCustomBrand, setNewCustomBrand] = useState('');
   const [seriesClassification, setSeriesClassification] = useState('');
   const [unit, setUnit] = useState('m');
   const [unitPrice, setUnitPrice] = useState<number>(0);
@@ -176,24 +178,58 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
 
               {/* Brand Name */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Brand / Manufacturer
-                </label>
-                <select
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                >
-                  <option value="VEKA">VEKA</option>
-                  <option value="Kommerling">Kommerling</option>
-                  <option value="Rehau">Rehau</option>
-                  <option value="Aluplast">Aluplast</option>
-                  <option value="Prominance">Prominance</option>
-                  <option value="Saint-Gobain">Saint-Gobain</option>
-                  <option value="Dorma">Dorma</option>
-                  <option value="Jindal">Jindal</option>
-                  <option value="Generic">Generic / OEM</option>
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Brand / Manufacturer
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingNewBrand(!isAddingNewBrand)}
+                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold"
+                  >
+                    {isAddingNewBrand ? 'Select Existing' : '+ Add New Brand'}
+                  </button>
+                </div>
+
+                {isAddingNewBrand ? (
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Enter brand name..."
+                      value={newCustomBrand}
+                      onChange={(e) => setNewCustomBrand(e.target.value)}
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-600 bg-white"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const trimmed = newCustomBrand.trim();
+                        if (trimmed) {
+                          addBrand(trimmed);
+                          setBrandName(trimmed);
+                          setIsAddingNewBrand(false);
+                          setNewCustomBrand('');
+                        }
+                      }}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  >
+                    {brands.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Unit Purchase Price */}

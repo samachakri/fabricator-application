@@ -79,6 +79,10 @@ interface StoreContextType {
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
   adjustStock: (id: string, deltaQty: number, reason?: string) => void;
   deleteInventoryItem: (id: string) => void;
+  brands: string[];
+  addBrand: (brandName: string) => void;
+  updateBrand: (oldBrandName: string, newBrandName: string) => void;
+  deleteBrand: (brandName: string) => void;
   resetToDefaults: () => void;
 }
 
@@ -87,11 +91,25 @@ const StoreContext = createContext<StoreContextType | null>(null);
 const STORAGE_KEY_PROJECTS = 'fabricator_pro_projects_v2';
 const STORAGE_KEY_CUSTOMERS = 'fabricator_pro_customers_v2';
 const STORAGE_KEY_INVENTORY = 'fabricator_pro_inventory_v2';
+const STORAGE_KEY_BRANDS = 'fabricator_pro_brands_v1';
+
+const DEFAULT_BRANDS = [
+  'VEKA Systems India',
+  'Tata Steel Tubes Division',
+  'Kommerling Profiline',
+  'Rehau Acoustic Glazing',
+  'Prominance Hardware',
+  'Aluplast Profile Systems',
+  'Saint-Gobain Glass India',
+  'SecuSeal German Standard',
+  'Generic / OEM',
+];
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
   const [inventory, setInventory] = useState<InventoryItem[]>(INITIAL_INVENTORY);
+  const [brands, setBrands] = useState<string[]>(DEFAULT_BRANDS);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -99,10 +117,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const savedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
       const savedCustomers = localStorage.getItem(STORAGE_KEY_CUSTOMERS);
       const savedInventory = localStorage.getItem(STORAGE_KEY_INVENTORY);
+      const savedBrands = localStorage.getItem(STORAGE_KEY_BRANDS);
 
       if (savedProjects) setProjects(JSON.parse(savedProjects));
       if (savedCustomers) setCustomers(JSON.parse(savedCustomers));
       if (savedInventory) setInventory(JSON.parse(savedInventory));
+      if (savedBrands) {
+        setBrands(JSON.parse(savedBrands));
+      } else {
+        const brandSet = new Set<string>(DEFAULT_BRANDS);
+        INITIAL_INVENTORY.forEach((i) => {
+          if (i.brandName) brandSet.add(i.brandName);
+        });
+        setBrands(Array.from(brandSet));
+      }
     } catch (e) {
       console.warn('Failed to load store from localStorage', e);
     }
@@ -115,10 +143,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
       localStorage.setItem(STORAGE_KEY_CUSTOMERS, JSON.stringify(customers));
       localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(inventory));
+      localStorage.setItem(STORAGE_KEY_BRANDS, JSON.stringify(brands));
     } catch (e) {
       console.warn('Failed to save store to localStorage', e);
     }
-  }, [projects, customers, inventory, isLoaded]);
+  }, [projects, customers, inventory, brands, isLoaded]);
 
   const getProject = (id: string) => projects.find((p) => p.id === id);
 
@@ -825,13 +854,47 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setInventory((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const addBrand = (brandName: string) => {
+    const trimmed = brandName.trim();
+    if (!trimmed) return;
+    setBrands((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+  };
+
+  const updateBrand = (oldBrandName: string, newBrandName: string) => {
+    const trimmed = newBrandName.trim();
+    if (!trimmed || trimmed === oldBrandName) return;
+
+    // Update brands list
+    setBrands((prev) => prev.map((b) => (b === oldBrandName ? trimmed : b)));
+
+    // Update all inventory items with this brand name
+    setInventory((prev) =>
+      prev.map((item) => {
+        if (item.brandName === oldBrandName || item.brand === oldBrandName) {
+          return {
+            ...item,
+            brandName: trimmed,
+            brand: trimmed as any,
+          };
+        }
+        return item;
+      })
+    );
+  };
+
+  const deleteBrand = (brandName: string) => {
+    setBrands((prev) => prev.filter((b) => b !== brandName));
+  };
+
   const resetToDefaults = () => {
     setProjects(INITIAL_PROJECTS);
     setCustomers(INITIAL_CUSTOMERS);
     setInventory(INITIAL_INVENTORY);
+    setBrands(DEFAULT_BRANDS);
     localStorage.removeItem(STORAGE_KEY_PROJECTS);
     localStorage.removeItem(STORAGE_KEY_CUSTOMERS);
     localStorage.removeItem(STORAGE_KEY_INVENTORY);
+    localStorage.removeItem(STORAGE_KEY_BRANDS);
   };
 
   return (
@@ -861,6 +924,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         updateInventoryItem,
         adjustStock,
         deleteInventoryItem,
+        brands,
+        addBrand,
+        updateBrand,
+        deleteBrand,
         resetToDefaults,
       }}
     >

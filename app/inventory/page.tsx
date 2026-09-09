@@ -9,6 +9,7 @@ import StockMovementModal from '@/components/modals/StockMovementModal';
 import EditItemModal from '@/components/modals/EditItemModal';
 import QuickReorderModal from '@/components/modals/QuickReorderModal';
 import { ProUpgradeModal } from '@/components/modals/ProUpgradeModal';
+import ManageBrandsDrawer from '@/components/modals/ManageBrandsDrawer';
 import {
   Package,
   Layers,
@@ -34,10 +35,11 @@ import {
   Box,
   Wrench,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { inventory } = useStore();
+  const { inventory, brands } = useStore();
   const { branding } = useBranding();
 
   // Modals state
@@ -49,6 +51,7 @@ export default function InventoryPage() {
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [reorderSelectedItem, setReorderSelectedItem] = useState<InventoryItem | null>(null);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isBrandsDrawerOpen, setIsBrandsDrawerOpen] = useState(false);
 
   // Filter and Search states
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -112,12 +115,12 @@ export default function InventoryPage() {
 
   // Brand dropdown options
   const brandsList = useMemo(() => {
-    const list = new Set<string>();
+    const list = new Set<string>(brands || []);
     inventory.forEach((i) => {
       if (i.brandName) list.add(i.brandName);
     });
     return ['All', ...Array.from(list)];
-  }, [inventory]);
+  }, [brands, inventory]);
 
   // Unit dropdown options
   const unitsList = useMemo(() => {
@@ -379,6 +382,15 @@ export default function InventoryPage() {
           </button>
 
           <button
+            onClick={() => setIsBrandsDrawerOpen(true)}
+            title="Manage, edit & add brand names"
+            className="px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-xs transition-all flex items-center gap-2"
+          >
+            <Tag className="w-4 h-4 text-indigo-600" />
+            <span>Manage Brands</span>
+          </button>
+
+          <button
             onClick={() => setIsAddModalOpen(true)}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2 transition-all"
           >
@@ -552,17 +564,27 @@ export default function InventoryPage() {
           {/* Brand Dropdown */}
           <div className="flex items-center gap-1.5 text-xs text-slate-600">
             <span className="font-semibold text-slate-500">Brands:</span>
-            <select
-              value={brandFilter}
-              onChange={(e) => setBrandFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {brandsList.map((brand) => (
-                <option key={brand} value={brand}>
-                  {brand === 'All' ? 'All Brands' : brand}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1">
+              <select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                {brandsList.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand === 'All' ? 'All Brands' : brand}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setIsBrandsDrawerOpen(true)}
+                title="Manage, edit & add brands"
+                className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-colors flex items-center justify-center"
+              >
+                <Tag className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Units Dropdown */}
@@ -1059,6 +1081,12 @@ export default function InventoryPage() {
         isOpen={isProModalOpen}
         onClose={() => setIsProModalOpen(false)}
         featureName="Enterprise Inventory & Multi-Warehouse Tracking"
+      />
+
+      {/* Side Pop-Up View: Manage Brands Drawer */}
+      <ManageBrandsDrawer
+        isOpen={isBrandsDrawerOpen}
+        onClose={() => setIsBrandsDrawerOpen(false)}
       />
     </div>
   );
