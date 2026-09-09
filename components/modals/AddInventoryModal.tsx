@@ -228,20 +228,19 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 </div>
               </div>
 
-              {/* Series Name (Mention or Create by Himself) */}
+              {/* Series Name (Optional) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Series Name (Create / Custom) *</span>
+                  <span>Series Name (Optional)</span>
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
-                    required
                     list="series-suggestions-list"
                     value={seriesClassification}
                     onChange={(e) => setSeriesClassification(e.target.value)}
-                    placeholder="Enter or create custom series (e.g. 60mm Casement, 2.5 Track Sliding)..."
+                    placeholder="Enter series name or leave blank (e.g. Casement, Sliding)..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
                   <datalist id="series-suggestions-list">
@@ -288,10 +287,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 </select>
               </div>
 
-              {/* Profile Bar Length / Dimension */}
+              {/* Length / Dimension (Supports both Profile & Glass Measurements) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Profile Bar Length / Dimension *</span>
+                  <span>Length / Dimension *</span>
                 </label>
                 <div className="space-y-1.5">
                   <input
@@ -299,11 +298,11 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                     required
                     value={profileLength}
                     onChange={(e) => setProfileLength(e.target.value)}
-                    placeholder="e.g. 20 feet (approx 6.0m)"
+                    placeholder="e.g. 20 feet, 6.0m, or Glass 4ft x 6ft, 1200 x 1800 mm..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {lengthPresets.map((lp) => (
+                    {['20 feet', '6.0 meters', '4ft × 6ft (Glass)', '1200 × 1800 mm'].map((lp) => (
                       <button
                         type="button"
                         key={lp}
@@ -321,10 +320,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 </div>
               </div>
 
-              {/* Quantity of Profiles Received */}
+              {/* Quantity */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Quantity of Profiles (Count Received) *
+                  Quantity *
                 </label>
                 <div className="relative">
                   <input
@@ -337,19 +336,18 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary">
-                    Profiles
+                    Qty
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  e.g. <strong>{profileCount.toLocaleString('en-IN')}</strong> profiles of {profileLength}
+                  e.g. <strong>{profileCount.toLocaleString('en-IN')}</strong> units of {profileLength}
                 </p>
               </div>
 
-              {/* Price for Each Profile */}
+              {/* Price for Each */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Price for Each Profile (₹) *</span>
-                  <span className="text-[11px] text-slate-400 font-normal">per profile bar</span>
+                  <span>Price for Each (₹) *</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
@@ -362,12 +360,12 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                     required
                     value={pricePerProfile}
                     onChange={(e) => setPricePerProfile(Number(e.target.value))}
-                    placeholder="e.g. 1200"
+                    placeholder="e.g. 1160"
                     className="w-full pl-8 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Cost per profile delivered: <strong>₹{pricePerProfile.toLocaleString('en-IN')}</strong>
+                  Cost per unit: <strong>₹{pricePerProfile.toLocaleString('en-IN')}</strong>
                 </p>
               </div>
 

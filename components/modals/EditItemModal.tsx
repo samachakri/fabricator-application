@@ -215,15 +215,15 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Series Name (Custom / Create) *</span>
+                  <span>Series Name (Optional)</span>
                 </label>
                 <div className="space-y-1.5">
                   <input
                     type="text"
-                    required
                     list="edit-series-suggestions"
                     value={seriesClassification}
                     onChange={(e) => setSeriesClassification(e.target.value)}
+                    placeholder="Enter series name or leave blank (Optional)..."
                     className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
                   <datalist id="edit-series-suggestions">
@@ -269,10 +269,10 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 </select>
               </div>
 
-              {/* Unit Purchase Price */}
+              {/* Price for Each */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Price for Each Profile / Unit (₹) *
+                  Price for Each (₹) *
                 </label>
                 <input
                   type="number"
@@ -285,10 +285,10 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 />
               </div>
 
-              {/* Current Stock */}
+              {/* Quantity */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Current Stock (Quantity of Profiles) *</span>
+                  <span>Quantity *</span>
                 </label>
                 <input
                   type="number"
@@ -320,16 +320,16 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 />
               </div>
 
-              {/* Secondary Stock Detail */}
+              {/* Length / Dimension */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Profile Specification / Dimension Details
+                  Length / Dimension (e.g. 20 feet, 6.0m, or Glass 4ft x 6ft)
                 </label>
                 <input
                   type="text"
                   value={secondaryStockDetail}
                   onChange={(e) => setSecondaryStockDetail(e.target.value)}
-                  placeholder="e.g. 2000 Profiles (20 feet each)"
+                  placeholder="e.g. 20 feet, 6.0m, or Glass 4ft x 6ft, 1200 x 1800 mm..."
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
