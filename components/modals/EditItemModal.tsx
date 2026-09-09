@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { InventoryItem } from '@/lib/types';
-import { X, Edit3, Trash2, CheckCircle2 } from 'lucide-react';
+import { X, Edit3, Trash2, CheckCircle2, Tag, Layers } from 'lucide-react';
 
 interface EditItemModalProps {
   isOpen: boolean;
@@ -17,16 +17,23 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
   const [name, setName] = useState('');
   const [specSubtitle, setSpecSubtitle] = useState('');
   const [brandName, setBrandName] = useState('');
-  const [isAddingNewBrand, setIsAddingNewBrand] = useState(false);
-  const [newCustomBrand, setNewCustomBrand] = useState('');
   const [seriesClassification, setSeriesClassification] = useState('');
   const [unit, setUnit] = useState('m');
   const [unitPrice, setUnitPrice] = useState<number>(0);
   const [currentStock, setCurrentStock] = useState<number>(0);
   const [minStock, setMinStock] = useState<number>(0);
-  const [rackLocation, setRackLocation] = useState('');
   const [secondaryStockDetail, setSecondaryStockDetail] = useState('');
   const [success, setSuccess] = useState(false);
+
+  const seriesPresets = [
+    'Casement Series',
+    'Sliding Series',
+    'Tilt & Turn Series',
+    '60mm Outer Frame Series',
+    '2.5 Track Sliding Series',
+    'Hardware & Fittings',
+    'Glass Sheets & Steel',
+  ];
 
   useEffect(() => {
     if (item) {
@@ -38,7 +45,6 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
       setUnitPrice(item.unitPrice || 0);
       setCurrentStock(item.currentStock || 0);
       setMinStock(item.minStock || 0);
-      setRackLocation(item.rackLocation || '');
       setSecondaryStockDetail(item.secondaryStockDetail || '');
     }
   }, [item]);
@@ -50,30 +56,37 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const trimmedBrand = brandName.trim() || 'Generic';
+    if (!brands.some((b) => b.toLowerCase() === trimmedBrand.toLowerCase())) {
+      addBrand(trimmedBrand);
+    }
+
+    const trimmedSeries = seriesClassification.trim() || 'Casement Series';
+
     const status: InventoryItem['status'] =
       currentStock === 0 ? 'Out of Stock' : currentStock <= minStock ? 'Low Stock' : 'In Stock';
 
     updateInventoryItem(item.id, {
       name: name.trim(),
       specSubtitle: specSubtitle.trim() || undefined,
-      brandName: brandName.trim() || undefined,
-      seriesClassification: seriesClassification.trim() || undefined,
-      seriesCategory: seriesClassification.toLowerCase().includes('casement')
+      brandName: trimmedBrand,
+      brand: trimmedBrand as any,
+      seriesClassification: trimmedSeries,
+      seriesCategory: trimmedSeries.toLowerCase().includes('casement')
         ? 'casement'
-        : seriesClassification.toLowerCase().includes('sliding')
+        : trimmedSeries.toLowerCase().includes('sliding')
         ? 'sliding'
-        : seriesClassification.toLowerCase().includes('tilt')
+        : trimmedSeries.toLowerCase().includes('tilt')
         ? 'tilt_turn'
-        : seriesClassification.toLowerCase().includes('hardware')
+        : trimmedSeries.toLowerCase().includes('hardware')
         ? 'hardware'
-        : seriesClassification.toLowerCase().includes('glass')
+        : trimmedSeries.toLowerCase().includes('glass') || trimmedSeries.toLowerCase().includes('steel')
         ? 'glass_steel'
         : 'other',
-      unit,
+      unit: unit === 'meter' ? 'm' : unit,
       unitPrice: Number(unitPrice),
       currentStock: Number(currentStock),
       minStock: Number(minStock),
-      rackLocation: rackLocation.trim() || undefined,
       secondaryStockDetail: secondaryStockDetail.trim() || undefined,
       status,
     });
@@ -157,85 +170,109 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 />
               </div>
 
-              {/* Series Classification */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Series Classification
-                </label>
-                <select
-                  value={seriesClassification}
-                  onChange={(e) => setSeriesClassification(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                >
-                  <option value="Casement Series">Casement Series</option>
-                  <option value="Sliding Series">Sliding Series</option>
-                  <option value="Tilt & Turn Series">Tilt & Turn Series</option>
-                  <option value="Hardware & Fittings">Hardware & Fittings</option>
-                  <option value="Glass Sheets & Steel">Glass Sheets & Steel</option>
-                  <option value="Gaskets & Consumables">Gaskets & Consumables</option>
-                </select>
-              </div>
-
               {/* Brand Name */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Brand / Manufacturer
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingNewBrand(!isAddingNewBrand)}
-                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold"
-                  >
-                    {isAddingNewBrand ? 'Select Existing' : '+ Add New Brand'}
-                  </button>
-                </div>
-
-                {isAddingNewBrand ? (
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="Enter brand name..."
-                      value={newCustomBrand}
-                      onChange={(e) => setNewCustomBrand(e.target.value)}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-600 bg-white"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const trimmed = newCustomBrand.trim();
-                        if (trimmed) {
-                          addBrand(trimmed);
-                          setBrandName(trimmed);
-                          setIsAddingNewBrand(false);
-                          setNewCustomBrand('');
-                        }
-                      }}
-                      className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700"
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
-                  <select
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Brand Name *</span>
+                </label>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    required
+                    list="edit-brand-suggestions"
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                  >
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  />
+                  <datalist id="edit-brand-suggestions">
                     {brands.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
+                      <option key={b} value={b} />
                     ))}
-                  </select>
-                )}
+                  </datalist>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>
+                    {brands.slice(0, 4).map((b) => (
+                      <button
+                        type="button"
+                        key={b}
+                        onClick={() => setBrandName(b)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                          brandName === b
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Series Classification */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Series Name (Custom / Create) *</span>
+                </label>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    required
+                    list="edit-series-suggestions"
+                    value={seriesClassification}
+                    onChange={(e) => setSeriesClassification(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  />
+                  <datalist id="edit-series-suggestions">
+                    {seriesPresets.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>
+                    {seriesPresets.slice(0, 3).map((s) => (
+                      <button
+                        type="button"
+                        key={s}
+                        onClick={() => setSeriesClassification(s)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                          seriesClassification === s
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit Dropdown */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Unit of Measure (Drop-Down) *
+                </label>
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                >
+                  <option value="m">Meter (m)</option>
+                  <option value="sq.ft">Square Feet (sq.ft)</option>
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="pcs">Pieces / Profiles (pcs)</option>
+                </select>
               </div>
 
               {/* Unit Purchase Price */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Unit Purchase Price (₹) *
+                  Price for Each Profile / Unit (₹) *
                 </label>
                 <input
                   type="number"
@@ -248,23 +285,10 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 />
               </div>
 
-              {/* Unit */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Unit of Measure
-                </label>
-                <input
-                  type="text"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                />
-              </div>
-
               {/* Current Stock */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Current Stock On Hand
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Current Stock (Quantity of Profiles) *</span>
                 </label>
                 <input
                   type="number"
@@ -275,12 +299,15 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                   onChange={(e) => setCurrentStock(Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Adding stock above minimum threshold clears Low Stock and hides Reorder button.
+                </p>
               </div>
 
               {/* Min Stock */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Min Stock (Reorder Threshold)
+                  Min Stock (Low Stock Alert Threshold) *
                 </label>
                 <input
                   type="number"
@@ -294,36 +321,22 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
               </div>
 
               {/* Secondary Stock Detail */}
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Secondary Detail / Conversion
+                  Profile Specification / Dimension Details
                 </label>
                 <input
                   type="text"
                   value={secondaryStockDetail}
                   onChange={(e) => setSecondaryStockDetail(e.target.value)}
-                  placeholder="e.g. 50 Bars (6.0m each)"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                />
-              </div>
-
-              {/* Rack Location */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Rack / Bay Location
-                </label>
-                <input
-                  type="text"
-                  value={rackLocation}
-                  onChange={(e) => setRackLocation(e.target.value)}
-                  placeholder="e.g. Rack B-03"
+                  placeholder="e.g. 2000 Profiles (20 feet each)"
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
             </div>
 
             {/* Valuation Summary Card */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Total Valuation for this Item
@@ -335,7 +348,19 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                   {currentStock} {unit} @ ₹{unitPrice}/{unit}
                 </p>
               </div>
-              <div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
+                  {currentStock <= minStock ? (
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      Low Stock
+                    </span>
+                  ) : (
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      In Stock
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -370,3 +395,4 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
     </div>
   );
 }
+

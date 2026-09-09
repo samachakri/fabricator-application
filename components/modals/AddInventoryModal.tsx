@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { InventoryItem } from '@/lib/types';
-import { X, Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Plus, CheckCircle2, Layers, Tag, DollarSign, Box } from 'lucide-react';
 
 interface AddInventoryModalProps {
   isOpen: boolean;
@@ -16,73 +16,97 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
   const [name, setName] = useState('');
   const [specSubtitle, setSpecSubtitle] = useState('');
   const [seriesClassification, setSeriesClassification] = useState('Casement Series');
-  const [category, setCategory] = useState<InventoryItem['category']>('Profile');
-  const [brandName, setBrandName] = useState(brands[0] || 'VEKA Systems India');
-  const [isAddingNewBrand, setIsAddingNewBrand] = useState(false);
-  const [newCustomBrand, setNewCustomBrand] = useState('');
-  const [unit, setUnit] = useState('m');
-  const [currentStock, setCurrentStock] = useState<number>(100);
-  const [minStock, setMinStock] = useState<number>(50);
-  const [unitPrice, setUnitPrice] = useState<number>(240);
-  const [rackLocation, setRackLocation] = useState('Rack A-01');
-  const [secondaryStockDetail, setSecondaryStockDetail] = useState('');
-  const [iconType, setIconType] = useState<InventoryItem['iconType']>('profile');
+  const [brandName, setBrandName] = useState(brands[0] || 'VEKA Systems');
+  const [unit, setUnit] = useState('meter');
+  const [profileLength, setProfileLength] = useState('20 feet');
+  const [profileCount, setProfileCount] = useState<number>(2000);
+  const [pricePerProfile, setPricePerProfile] = useState<number>(1200);
+  const [minStock, setMinStock] = useState<number>(100);
   const [successMsg, setSuccessMsg] = useState(false);
 
   if (!isOpen) return null;
 
-  const totalValuation = (currentStock || 0) * (unitPrice || 0);
+  // Real-time calculations
+  const totalValuation = (profileCount || 0) * (pricePerProfile || 0);
 
-  const handleCreateCustomBrand = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const trimmed = newCustomBrand.trim();
-    if (!trimmed) return;
-    addBrand(trimmed);
-    setBrandName(trimmed);
-    setIsAddingNewBrand(false);
-    setNewCustomBrand('');
-  };
+  // Common quick-pick presets
+  const seriesPresets = [
+    'Casement Series',
+    'Sliding Series',
+    'Tilt & Turn Series',
+    '60mm Outer Frame Series',
+    '2.5 Track Sliding Series',
+    'Hardware & Fittings',
+    'Glass Sheets & Steel',
+  ];
+
+  const lengthPresets = ['20 feet', '6.0 meters', '19.5 feet', '21 feet'];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const status: InventoryItem['status'] =
-      currentStock === 0 ? 'Out of Stock' : currentStock <= minStock ? 'Low Stock' : 'In Stock';
+    const trimmedBrand = brandName.trim() || 'Generic';
+    // Automatically register brand if not in store
+    if (!brands.some((b) => b.toLowerCase() === trimmedBrand.toLowerCase())) {
+      addBrand(trimmedBrand);
+    }
 
-    const sku = `${brandName.slice(0, 3).toUpperCase()}-${category.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    const trimmedSeries = seriesClassification.trim() || 'Casement Series';
+
+    const status: InventoryItem['status'] =
+      profileCount === 0 ? 'Out of Stock' : profileCount <= minStock ? 'Low Stock' : 'In Stock';
+
+    const sku = `${trimmedBrand.slice(0, 3).toUpperCase()}-PRF-${Math.floor(100 + Math.random() * 900)}`;
+
+    const category: InventoryItem['category'] = trimmedSeries.toLowerCase().includes('hardware')
+      ? 'Hardware'
+      : trimmedSeries.toLowerCase().includes('glass')
+      ? 'Glass'
+      : trimmedSeries.toLowerCase().includes('steel')
+      ? 'Steel'
+      : 'Profile';
+
+    const iconType: InventoryItem['iconType'] = category === 'Hardware'
+      ? 'hardware'
+      : category === 'Glass'
+      ? 'glass'
+      : category === 'Steel'
+      ? 'steel'
+      : 'profile';
+
+    const secondaryStockDetail = `${profileCount.toLocaleString('en-IN')} Profiles (${profileLength} each)`;
 
     addInventoryItem({
       sku,
       name: name.trim(),
       specSubtitle: specSubtitle.trim() || undefined,
       category,
-      seriesClassification,
-      seriesCategory: seriesClassification.toLowerCase().includes('casement')
+      seriesClassification: trimmedSeries,
+      seriesCategory: trimmedSeries.toLowerCase().includes('casement')
         ? 'casement'
-        : seriesClassification.toLowerCase().includes('sliding')
+        : trimmedSeries.toLowerCase().includes('sliding')
         ? 'sliding'
-        : seriesClassification.toLowerCase().includes('tilt')
+        : trimmedSeries.toLowerCase().includes('tilt')
         ? 'tilt_turn'
-        : seriesClassification.toLowerCase().includes('hardware')
+        : trimmedSeries.toLowerCase().includes('hardware')
         ? 'hardware'
-        : seriesClassification.toLowerCase().includes('glass')
+        : trimmedSeries.toLowerCase().includes('glass') || trimmedSeries.toLowerCase().includes('steel')
         ? 'glass_steel'
         : 'other',
-      brand: (brandName as any) || 'Generic',
-      brandName,
-      unit,
-      stockQty: Number(currentStock),
+      brand: trimmedBrand as any,
+      brandName: trimmedBrand,
+      unit: unit === 'meter' ? 'm' : unit,
+      stockQty: Number(profileCount),
       reservedQty: 0,
-      availableQty: Number(currentStock),
-      currentStock: Number(currentStock),
+      availableQty: Number(profileCount),
+      currentStock: Number(profileCount),
       minStock: Number(minStock),
       reorderPoint: Number(minStock),
-      unitPrice: Number(unitPrice),
-      binLocation: rackLocation.trim() || 'Yard Rack A-01',
+      unitPrice: Number(pricePerProfile),
+      binLocation: 'Extrusion Yard Bay 1',
       status,
-      rackLocation: rackLocation.trim() || undefined,
-      secondaryStockDetail: secondaryStockDetail.trim() || undefined,
+      secondaryStockDetail,
       iconType,
     });
 
@@ -90,7 +114,7 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
     setTimeout(() => {
       setSuccessMsg(false);
       onClose();
-      // Reset form
+      // Reset form defaults
       setName('');
       setSpecSubtitle('');
     }, 900);
@@ -106,8 +130,8 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
               <Plus className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">Add New Inventory Material</h3>
-              <p className="text-xs text-slate-300">Catalog uPVC profiles, reinforcements, hardware & glazing</p>
+              <h3 className="text-lg font-bold">Add Inventory Profiles & Materials</h3>
+              <p className="text-xs text-slate-300">Catalog received extrusion profiles, brand pricing & quantity</p>
             </div>
           </div>
           <button
@@ -124,15 +148,15 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/50 animate-bounce">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h4 className="text-xl font-bold text-slate-900">Inventory Item Added!</h4>
+            <h4 className="text-xl font-bold text-slate-900">Inventory Stock Added!</h4>
             <p className="text-sm text-slate-500">
-              {name} has been cataloged. Available stock and valuation updated live.
+              {profileCount.toLocaleString('en-IN')} profiles of {name} cataloged. Available stock & valuation updated.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Material Name */}
+              {/* Item / Profile Name */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Item / Profile Name *
@@ -142,12 +166,12 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. VEKA 70mm Outer Frame Profile"
+                  placeholder="e.g. Outer Frame Profile, Sliding Track, Sash Section..."
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                 />
               </div>
 
-              {/* Subtitle / Spec */}
+              {/* Specification Subtitle */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Specification Subtitle
@@ -156,148 +180,204 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                   type="text"
                   value={specSubtitle}
                   onChange={(e) => setSpecSubtitle(e.target.value)}
-                  placeholder="e.g. 5-Chamber UV Resistant Multi-Lock Profile"
+                  placeholder="e.g. 5-Chamber UV Resistant Profile (White RAL 9016)"
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
 
-              {/* Series Classification */}
+              {/* Brand Name Input */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Series Classification
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Brand Name *</span>
                 </label>
-                <select
-                  value={seriesClassification}
-                  onChange={(e) => {
-                    setSeriesClassification(e.target.value);
-                    if (e.target.value.includes('Hardware')) {
-                      setCategory('Hardware');
-                      setIconType('hardware');
-                      setUnit('pcs');
-                    } else if (e.target.value.includes('Glass')) {
-                      setCategory('Glass');
-                      setIconType('glass');
-                      setUnit('sq.m');
-                    } else {
-                      setCategory('Profile');
-                      setIconType('profile');
-                      setUnit('m');
-                    }
-                  }}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                >
-                  <option value="Casement Series">Casement Series</option>
-                  <option value="Sliding Series">Sliding Series</option>
-                  <option value="Tilt & Turn Series">Tilt & Turn Series</option>
-                  <option value="Hardware & Fittings">Hardware & Fittings</option>
-                  <option value="Glass Sheets & Steel">Glass Sheets & Steel</option>
-                  <option value="Gaskets & Consumables">Gaskets & Consumables</option>
-                </select>
-              </div>
-
-              {/* Brand Name */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Brand / Manufacturer
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingNewBrand(!isAddingNewBrand)}
-                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold"
-                  >
-                    {isAddingNewBrand ? 'Select Existing' : '+ Add New Brand'}
-                  </button>
-                </div>
-
-                {isAddingNewBrand ? (
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="Enter brand name..."
-                      value={newCustomBrand}
-                      onChange={(e) => setNewCustomBrand(e.target.value)}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-600 bg-white"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateCustomBrand}
-                      className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700"
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
-                  <select
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    required
+                    list="brand-suggestions-list"
                     value={brandName}
                     onChange={(e) => setBrandName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                  >
+                    placeholder="Enter brand name (e.g. VEKA, Kommerling, Prominance)..."
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  />
+                  <datalist id="brand-suggestions-list">
                     {brands.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
+                      <option key={b} value={b} />
                     ))}
-                  </select>
-                )}
+                  </datalist>
+
+                  {/* Quick-click registered brand pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Quick picks:</span>
+                    {brands.slice(0, 4).map((b) => (
+                      <button
+                        type="button"
+                        key={b}
+                        onClick={() => setBrandName(b)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                          brandName === b
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Unit of Measurement */}
+              {/* Series Name (Mention or Create by Himself) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Series Name (Create / Custom) *</span>
+                </label>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    required
+                    list="series-suggestions-list"
+                    value={seriesClassification}
+                    onChange={(e) => setSeriesClassification(e.target.value)}
+                    placeholder="Enter or create custom series (e.g. 60mm Casement, 2.5 Track Sliding)..."
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  />
+                  <datalist id="series-suggestions-list">
+                    {seriesPresets.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+
+                  {/* Quick-click suggestion chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>
+                    {seriesPresets.slice(0, 3).map((s) => (
+                      <button
+                        type="button"
+                        key={s}
+                        onClick={() => setSeriesClassification(s)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                          seriesClassification === s
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit of Measurement Dropdown */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Unit of Measure
+                  Unit of Measure (Drop-Down) *
                 </label>
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-800"
                 >
-                  <option value="m">Meters (m)</option>
-                  <option value="pcs">Pieces (pcs)</option>
-                  <option value="sq.m">Square Meters (sq.m)</option>
+                  <option value="meter">Meter (m)</option>
+                  <option value="sq.ft">Square Feet (sq.ft)</option>
                   <option value="kg">Kilograms (kg)</option>
-                  <option value="rolls">Rolls</option>
-                  <option value="boxes">Boxes</option>
-                  <option value="sets">Sets</option>
+                  <option value="pcs">Pieces / Profiles (pcs)</option>
                 </select>
               </div>
 
-              {/* Unit Price */}
+              {/* Profile Bar Length / Dimension */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Unit Purchase Price (₹) *
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Profile Bar Length / Dimension *</span>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  value={unitPrice}
-                  onChange={(e) => setUnitPrice(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900"
-                />
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    required
+                    value={profileLength}
+                    onChange={(e) => setProfileLength(e.target.value)}
+                    placeholder="e.g. 20 feet (approx 6.0m)"
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                  />
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {lengthPresets.map((lp) => (
+                      <button
+                        type="button"
+                        key={lp}
+                        onClick={() => setProfileLength(lp)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                          profileLength === lp
+                            ? 'bg-slate-800 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {lp}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Opening Stock Quantity */}
+              {/* Quantity of Profiles Received */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Opening Current Stock
+                  Quantity of Profiles (Count Received) *
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={currentStock}
-                  onChange={(e) => setCurrentStock(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={profileCount}
+                    onChange={(e) => setProfileCount(Number(e.target.value))}
+                    placeholder="e.g. 2000"
+                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary">
+                    Profiles
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  e.g. <strong>{profileCount.toLocaleString('en-IN')}</strong> profiles of {profileLength}
+                </p>
               </div>
 
-              {/* Reorder / Min Stock Level */}
+              {/* Price for Each Profile */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Low Stock Threshold
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Price for Each Profile (₹) *</span>
+                  <span className="text-[11px] text-slate-400 font-normal">per profile bar</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={pricePerProfile}
+                    onChange={(e) => setPricePerProfile(Number(e.target.value))}
+                    placeholder="e.g. 1200"
+                    className="w-full pl-8 pr-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Cost per profile delivered: <strong>₹{pricePerProfile.toLocaleString('en-IN')}</strong>
+                </p>
+              </div>
+
+              {/* Low Stock Threshold */}
+              <div className="md:col-span-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Low Stock Alert Threshold (Profiles)</span>
+                  <span className="text-[11px] text-amber-700 font-medium">
+                    "Reorder" button appears when stock falls to or below this level
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -305,66 +385,43 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                   required
                   value={minStock}
                   onChange={(e) => setMinStock(Number(e.target.value))}
+                  placeholder="e.g. 100"
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                />
-              </div>
-
-              {/* Secondary Stock Detail */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Secondary Detail / Conversion
-                </label>
-                <input
-                  type="text"
-                  value={secondaryStockDetail}
-                  onChange={(e) => setSecondaryStockDetail(e.target.value)}
-                  placeholder="e.g. 50 Bars (6.0m each)"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                />
-              </div>
-
-              {/* Rack Location */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Rack / Bay Location
-                </label>
-                <input
-                  type="text"
-                  value={rackLocation}
-                  onChange={(e) => setRackLocation(e.target.value)}
-                  placeholder="e.g. Rack B-03 / Yard 1"
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
             </div>
 
-            {/* Valuation Preview Card */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            {/* Live Valuation & Summary Card */}
+            <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Initial Stock Valuation
+                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+                  Calculated Batch Stock Valuation
                 </span>
-                <p className="text-xl font-extrabold text-slate-900 mt-0.5">
+                <p className="text-2xl font-black text-slate-900 mt-0.5">
                   ₹{totalValuation.toLocaleString('en-IN')}
                 </p>
-                <p className="text-xs text-slate-500">
-                  {currentStock} {unit} @ ₹{unitPrice}/{unit}
+                <p className="text-xs text-slate-600 font-secondary mt-0.5">
+                  {profileCount.toLocaleString('en-IN')} Profiles ({profileLength} each) @ ₹
+                  {pricePerProfile.toLocaleString('en-IN')} / profile ({unit})
                 </p>
               </div>
-              <div className="text-right">
-                <span className="text-xs font-medium text-slate-500">Initial Status</span>
+
+              <div className="sm:text-right">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Initial Stock Status
+                </span>
                 <div className="mt-1">
-                  {currentStock === 0 ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                  {profileCount === 0 ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
                       Out of Stock
                     </span>
-                  ) : currentStock <= minStock ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                      Low Stock Alert
+                  ) : profileCount <= minStock ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      Low Stock (Reorder Visible)
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                      Normal Stock
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      In Stock (Healthy)
                     </span>
                   )}
                 </div>
@@ -385,7 +442,7 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add to Stock
+                <span>Add Profiles to Stock</span>
               </button>
             </div>
           </form>
@@ -394,3 +451,4 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
     </div>
   );
 }
+

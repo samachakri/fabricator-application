@@ -61,9 +61,6 @@ export default function InventoryPage() {
   const [unitFilter, setUnitFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
-  // Selected row checkboxes
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
   // QC inspection modal state or interactive notice
   const [qcNotice, setQcNotice] = useState<string | null>(null);
 
@@ -249,21 +246,6 @@ export default function InventoryPage() {
     return `₹${totalValuationAmount.toLocaleString('en-IN')}`;
   }, [totalValuationAmount]);
 
-  // Toggle select all
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(filteredInventory.map((i) => i.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
-
-  const toggleSelectRow = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
   // Export CSV handler
   const handleExportCSV = () => {
     const headers = [
@@ -272,7 +254,6 @@ export default function InventoryPage() {
       'Specification',
       'Series Classification',
       'Brand / Manufacturer',
-      'Rack Location',
       'Stock On Hand',
       'Unit',
       'Min Reorder Level',
@@ -287,7 +268,6 @@ export default function InventoryPage() {
       `"${(item.specSubtitle || '').replace(/"/g, '""')}"`,
       `"${item.seriesClassification || item.category}"`,
       `"${item.brandName || ''}"`,
-      `"${item.rackLocation || ''}"`,
       item.currentStock,
       `"${item.unit}"`,
       item.minStock,
@@ -680,28 +660,14 @@ export default function InventoryPage() {
             {/* Table Header */}
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 font-secondary">
-                <th className="p-4 w-10 text-center align-middle">
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredInventory.length > 0 &&
-                      selectedIds.length === filteredInventory.length
-                    }
-                    onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                  />
-                </th>
-                <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[260px] align-middle">
+                <th className="py-4 px-4 font-extrabold whitespace-nowrap min-w-[280px] align-middle">
                   Profile / Material Name
                 </th>
-                <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[160px] align-middle">
-                  Series Classification
+                <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[170px] align-middle">
+                  Series Name
                 </th>
                 <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[160px] align-middle">
-                  Brand / Supplier
-                </th>
-                <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[160px] align-middle">
-                  Rack Location
+                  Brand / Manufacturer
                 </th>
                 <th className="py-4 px-3 font-extrabold whitespace-nowrap min-w-[170px] align-middle">
                   Stock On Hand
@@ -725,7 +691,7 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-slate-200">
               {filteredInventory.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-12 text-center text-slate-400">
+                  <td colSpan={8} className="p-12 text-center text-slate-400">
                     <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-600">No inventory materials match your filter</p>
                     <p className="text-xs text-slate-400 mt-0.5">
@@ -735,30 +701,17 @@ export default function InventoryPage() {
                 </tr>
               ) : (
                 filteredInventory.map((item) => {
-                  const isSelected = selectedIds.includes(item.id);
-                  const isLow = item.status === 'Low Stock' || item.currentStock <= item.minStock;
-                  const isOut = item.status === 'Out of Stock' || item.currentStock === 0;
+                  const isLow = item.currentStock <= item.minStock;
+                  const isOut = item.currentStock === 0;
                   const totalVal = item.currentStock * item.unitPrice;
 
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        isSelected ? 'bg-indigo-50/30' : ''
-                      }`}
+                      className="hover:bg-slate-50/80 transition-colors"
                     >
-                      {/* Select Checkbox */}
-                      <td className="p-4 text-center align-middle">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelectRow(item.id)}
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                        />
-                      </td>
-
                       {/* Material Name & Subtitle */}
-                      <td className="py-4 px-3 align-middle">
+                      <td className="py-4 px-4 align-middle">
                         <div className="flex items-center gap-3">
                           {getItemIcon(item)}
                           <div className="min-w-0">
@@ -786,17 +739,6 @@ export default function InventoryPage() {
                         <span className="font-bold text-slate-800 text-xs whitespace-nowrap font-secondary">
                           {item.brandName || 'Generic'}
                         </span>
-                      </td>
-
-                      {/* Rack Location */}
-                      <td className="py-4 px-3 align-middle whitespace-nowrap">
-                        {item.rackLocation ? (
-                          <span className="inline-block font-mono text-[11px] font-medium text-slate-700 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 whitespace-nowrap">
-                            {item.rackLocation}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 italic text-[11px] whitespace-nowrap">Yard / Floor</span>
-                        )}
                       </td>
 
                       {/* Stock On Hand & Bar */}
