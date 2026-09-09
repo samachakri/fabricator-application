@@ -7,7 +7,6 @@ import { InventoryItem } from '@/lib/types';
 import AddInventoryModal from '@/components/modals/AddInventoryModal';
 import StockMovementModal from '@/components/modals/StockMovementModal';
 import EditItemModal from '@/components/modals/EditItemModal';
-import QuickReorderModal from '@/components/modals/QuickReorderModal';
 import { ProUpgradeModal } from '@/components/modals/ProUpgradeModal';
 import ManageBrandsDrawer from '@/components/modals/ManageBrandsDrawer';
 import {
@@ -39,7 +38,7 @@ import {
 } from 'lucide-react';
 
 export default function InventoryPage() {
-  const { inventory, brands } = useStore();
+  const { inventory, brands, adjustStock } = useStore();
   const { branding } = useBranding();
 
   // Modals state
@@ -48,10 +47,12 @@ export default function InventoryPage() {
   const [movementSelectedId, setMovementSelectedId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editSelectedItem, setEditSelectedItem] = useState<InventoryItem | null>(null);
-  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
-  const [reorderSelectedItem, setReorderSelectedItem] = useState<InventoryItem | null>(null);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isBrandsDrawerOpen, setIsBrandsDrawerOpen] = useState(false);
+
+  // Quick reorder status (direct 1-click replenishment without pop-up)
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [reorderNotice, setReorderNotice] = useState<string | null>(null);
 
   // Filter and Search states
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -65,6 +66,24 @@ export default function InventoryPage() {
 
   // QC inspection modal state or interactive notice
   const [qcNotice, setQcNotice] = useState<string | null>(null);
+
+  // Direct 1-click Reorder handler (no pop-up view)
+  const handleDirectReorder = (item: InventoryItem) => {
+    setReorderingId(item.id);
+    const replenishQty = Math.max(item.minStock * 2 - item.currentStock, item.minStock || 50);
+    adjustStock(item.id, replenishQty, 'Direct 1-Click Reorder');
+    setReorderNotice(
+      `✓ Reordered +${replenishQty.toLocaleString('en-IN')} ${item.unit} for "${item.name}". Stock replenished to ${(
+        item.currentStock + replenishQty
+      ).toLocaleString('en-IN')} ${item.unit} (In Stock).`
+    );
+    setTimeout(() => {
+      setReorderingId(null);
+    }, 700);
+    setTimeout(() => {
+      setReorderNotice((prev) => (prev?.includes(item.name) ? null : prev));
+    }, 4500);
+  };
 
   // Tabs definitions
   const tabs = [
@@ -399,6 +418,22 @@ export default function InventoryPage() {
           </button>
         </div>
       </div>
+
+      {/* Reorder quick confirmation banner if active */}
+      {reorderNotice && (
+        <div className="p-3.5 bg-gradient-to-r from-amber-50 to-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between text-xs text-slate-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5 font-medium">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{reorderNotice}</span>
+          </div>
+          <button
+            onClick={() => setReorderNotice(null)}
+            className="text-slate-500 hover:text-slate-800 font-bold text-xs ml-4 px-2 py-0.5 rounded hover:bg-white/60 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* QC inspection quick banner if active */}
       {qcNotice && (
@@ -846,18 +881,24 @@ export default function InventoryPage() {
                             <span>Stock In/Out</span>
                           </button>
 
-                          {/* Quick Reorder button if Low */}
+                          {/* Reorder button - ONLY appears when stock is low, NO pop-up view */}
                           {isLow && (
                             <button
-                              onClick={() => {
-                                setReorderSelectedItem(item);
-                                setIsReorderModalOpen(true);
-                              }}
-                              title="Quick Reorder Stock"
-                              className="px-2.5 py-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap font-secondary"
+                              onClick={() => handleDirectReorder(item)}
+                              disabled={reorderingId === item.id}
+                              title={`1-Click Reorder to replenish ${item.name} stock`}
+                              className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap font-secondary shadow-2xs ${
+                                reorderingId === item.id
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-800 border border-amber-200 hover:border-amber-300'
+                              }`}
                             >
-                              <RefreshCw className="w-3 h-3 text-amber-600" />
-                              <span>Reorder</span>
+                              <RefreshCw
+                                className={`w-3 h-3 text-amber-600 ${
+                                  reorderingId === item.id ? 'animate-spin' : ''
+                                }`}
+                              />
+                              <span>{reorderingId === item.id ? 'Reordering...' : 'Reorder'}</span>
                             </button>
                           )}
 
@@ -1066,15 +1107,6 @@ export default function InventoryPage() {
           setEditSelectedItem(null);
         }}
         item={editSelectedItem}
-      />
-
-      <QuickReorderModal
-        isOpen={isReorderModalOpen}
-        onClose={() => {
-          setIsReorderModalOpen(false);
-          setReorderSelectedItem(null);
-        }}
-        item={reorderSelectedItem}
       />
 
       <ProUpgradeModal
