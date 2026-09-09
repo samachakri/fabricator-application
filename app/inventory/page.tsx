@@ -21,7 +21,6 @@ import {
   Edit3,
   ArrowUpDown,
   CheckCircle2,
-  Truck,
   Warehouse,
   ShieldCheck,
   Scissors,
@@ -431,8 +430,8 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* 4 Live KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3 Live KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Extrusions & Bars */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
@@ -501,29 +500,6 @@ export default function InventoryPage() {
             </div>
             <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Active Inward Material */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                ACTIVE INWARD MATERIAL
-              </span>
-              <div className="text-2xl font-black text-indigo-900">
-                +850 <span className="text-sm font-semibold text-slate-500">KGs</span>
-              </div>
-              <div className="flex items-center gap-1.5 pt-1">
-                <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                  <Truck className="w-3 h-3" />
-                  2 shipments arriving today
-                </span>
-              </div>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <Truck className="w-6 h-6" />
             </div>
           </div>
         </div>
