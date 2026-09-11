@@ -786,40 +786,6 @@ export default function InventoryPage() {
                       {/* Actions */}
                       <td className="py-4 px-4 align-middle text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                          {/* Stock In/Out button */}
-                          <button
-                            onClick={() => {
-                              setMovementSelectedId(item.id);
-                              setIsMovementModalOpen(true);
-                            }}
-                            title="Stock In / Out"
-                            className="px-2.5 py-1.5 text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap font-secondary"
-                          >
-                            <ArrowUpDown className="w-3 h-3 text-slate-500" />
-                            <span>Stock In/Out</span>
-                          </button>
-
-                          {/* Reorder button - ONLY appears when stock is low, NO pop-up view */}
-                          {isLow && (
-                            <button
-                              onClick={() => handleDirectReorder(item)}
-                              disabled={reorderingId === item.id}
-                              title={`1-Click Reorder to replenish ${item.name} stock`}
-                              className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap font-secondary shadow-2xs ${
-                                reorderingId === item.id
-                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                  : 'bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-800 border border-amber-200 hover:border-amber-300'
-                              }`}
-                            >
-                              <RefreshCw
-                                className={`w-3 h-3 text-amber-600 ${
-                                  reorderingId === item.id ? 'animate-spin' : ''
-                                }`}
-                              />
-                              <span>{reorderingId === item.id ? 'Reordering...' : 'Reorder'}</span>
-                            </button>
-                          )}
-
                           {/* Edit button */}
                           <button
                             onClick={() => {
@@ -827,9 +793,10 @@ export default function InventoryPage() {
                               setIsEditModalOpen(true);
                             }}
                             title="Edit specs & pricing"
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 hover:text-indigo-600 border border-slate-200 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs font-secondary"
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Edit</span>
                           </button>
                         </div>
                       </td>
