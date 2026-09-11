@@ -135,8 +135,35 @@ export const WindowControls: React.FC<WindowControlsProps> = ({
     }
   };
 
+  const leftHeight = design.leftHeight !== undefined ? design.leftHeight : design.height;
+  const rightHeight = design.rightHeight !== undefined ? design.rightHeight : design.height;
+  const topWidth = design.topWidth !== undefined ? design.topWidth : design.width;
+  const bottomWidth = design.bottomWidth !== undefined ? design.bottomWidth : design.width;
+
+  const hasCornerExtension = Boolean(design.cornerExtensions && design.cornerExtensions.length > 0);
+  const activeExt = design.cornerExtensions?.[0];
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-5 overflow-y-auto max-h-[calc(100vh-140px)]">
+      {/* Manual Window Name Input */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+            Window Identifier / Name
+          </label>
+          <span className="text-[10px] font-mono font-bold bg-[#0A2E8A] text-white px-2 py-0.5 rounded">
+            {design.id}
+          </span>
+        </div>
+        <input
+          type="text"
+          value={design.name}
+          onChange={(e) => onChange({ name: e.target.value })}
+          placeholder="e.g. 2 Track Sliding / Living Room Window"
+          className="w-full px-3 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0A2E8A]/20 focus:border-[#0A2E8A]"
+        />
+      </div>
+
       {/* Step Tabs Navigation */}
       <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold overflow-x-auto">
         {[
@@ -199,55 +226,246 @@ export const WindowControls: React.FC<WindowControlsProps> = ({
             </div>
           </div>
 
-          {/* Width & Height Dimensions */}
-          <div className="space-y-3 pt-2 border-t border-slate-100">
-            <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
-                <span>Outer Width (W)</span>
-                <span className="font-mono text-[#0A2E8A] font-bold">{design.width} mm</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="range"
-                  min="400"
-                  max="3600"
-                  step="10"
-                  value={design.width}
-                  onChange={(e) => onChange({ width: Number(e.target.value) })}
-                  className="flex-1 accent-[#0A2E8A] cursor-pointer"
-                />
+          {/* 4-Side Parametric Measurements Grid */}
+          <div className="pt-2 border-t border-slate-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                4-Side Measurements (mm)
+              </label>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Parametric CAD Sync
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* 1. Left Side Height */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-[11px] font-semibold text-slate-700 mb-1">
+                  <span>Left Side (H)</span>
+                  <span className="font-mono text-[#0A2E8A] font-bold">{leftHeight} mm</span>
+                </div>
                 <input
                   type="number"
-                  value={design.width}
-                  onChange={(e) => onChange({ width: Number(e.target.value) })}
-                  className="w-20 px-2 py-1 text-right text-xs font-mono font-bold border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
+                  min="0"
+                  max="4000"
+                  step="10"
+                  value={leftHeight}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value));
+                    onChange({
+                      leftHeight: val,
+                      height: Math.max(val, rightHeight),
+                    });
+                  }}
+                  className="w-full px-2 py-1 text-xs font-mono font-bold text-right bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
+                />
+              </div>
+
+              {/* 2. Right Side Height */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-[11px] font-semibold text-slate-700 mb-1">
+                  <span>Right Side (H)</span>
+                  <span className="font-mono text-[#0A2E8A] font-bold">{rightHeight} mm</span>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  max="4000"
+                  step="10"
+                  value={rightHeight}
+                  onChange={(e) => {
+                    const val = Math.max(0, Number(e.target.value));
+                    onChange({
+                      rightHeight: val,
+                      height: Math.max(leftHeight, val),
+                    });
+                  }}
+                  className="w-full px-2 py-1 text-xs font-mono font-bold text-right bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
+                />
+              </div>
+
+              {/* 3. Top Width */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-[11px] font-semibold text-slate-700 mb-1">
+                  <span>Top Width (W)</span>
+                  <span className="font-mono text-[#0A2E8A] font-bold">{topWidth} mm</span>
+                </div>
+                <input
+                  type="number"
+                  min="300"
+                  max="4000"
+                  step="10"
+                  value={topWidth}
+                  onChange={(e) => {
+                    const val = Math.max(300, Number(e.target.value));
+                    onChange({
+                      topWidth: val,
+                      width: Math.max(val, bottomWidth),
+                    });
+                  }}
+                  className="w-full px-2 py-1 text-xs font-mono font-bold text-right bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
+                />
+              </div>
+
+              {/* 4. Bottom Width */}
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-[11px] font-semibold text-slate-700 mb-1">
+                  <span>Bottom Width (W)</span>
+                  <span className="font-mono text-[#0A2E8A] font-bold">{bottomWidth} mm</span>
+                </div>
+                <input
+                  type="number"
+                  min="300"
+                  max="4000"
+                  step="10"
+                  value={bottomWidth}
+                  onChange={(e) => {
+                    const val = Math.max(300, Number(e.target.value));
+                    onChange({
+                      bottomWidth: val,
+                      width: Math.max(topWidth, val),
+                    });
+                  }}
+                  className="w-full px-2 py-1 text-xs font-mono font-bold text-right bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
                 />
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
-                <span>Outer Height (H)</span>
-                <span className="font-mono text-[#0A2E8A] font-bold">{design.height} mm</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="range"
-                  min="400"
-                  max="3000"
-                  step="10"
-                  value={design.height}
-                  onChange={(e) => onChange({ height: Number(e.target.value) })}
-                  className="flex-1 accent-[#0A2E8A] cursor-pointer"
-                />
-                <input
-                  type="number"
-                  value={design.height}
-                  onChange={(e) => onChange({ height: Number(e.target.value) })}
-                  className="w-20 px-2 py-1 text-right text-xs font-mono font-bold border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#0A2E8A]"
-                />
+            {/* Quick Presets (including Right-Angle Triangle 400x400 with Left 0) */}
+            <div className="pt-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                Quick Geometry Presets
+              </span>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({
+                      width: 400,
+                      height: 400,
+                      topWidth: 400,
+                      bottomWidth: 400,
+                      leftHeight: 400,
+                      rightHeight: 400,
+                      slopeAngle: 0,
+                      cornerExtensions: [],
+                    });
+                  }}
+                  className="p-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 text-left"
+                >
+                  Square 400 × 400 mm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({
+                      width: 400,
+                      height: 400,
+                      topWidth: 400,
+                      bottomWidth: 400,
+                      leftHeight: 0,
+                      rightHeight: 400,
+                      slopeAngle: 45,
+                    });
+                  }}
+                  className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/60 text-[11px] font-bold text-[#0A2E8A] hover:bg-blue-100/60 text-left"
+                >
+                  Right Triangle (Left 0 mm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({
+                      width: 400,
+                      height: 400,
+                      topWidth: 400,
+                      bottomWidth: 400,
+                      leftHeight: 400,
+                      rightHeight: 0,
+                      slopeAngle: 45,
+                    });
+                  }}
+                  className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/60 text-[11px] font-bold text-[#0A2E8A] hover:bg-blue-100/60 text-left"
+                >
+                  Right Triangle (Right 0 mm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange({
+                      width: 1200,
+                      height: 1400,
+                      topWidth: 1200,
+                      bottomWidth: 1200,
+                      leftHeight: 800,
+                      rightHeight: 1400,
+                      slopeAngle: 45,
+                    });
+                  }}
+                  className="p-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-700 hover:bg-slate-50 text-left"
+                >
+                  45° Rake Trapezoid
+                </button>
               </div>
             </div>
+
+            {/* Corner Extension Card (Triggered by clicking corner '+' icon) */}
+            {hasCornerExtension && activeExt && (
+              <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 space-y-2 mt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0A2E8A] flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Corner Attachment ({activeExt.corner.replace('_', ' ').toUpperCase()})</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ cornerExtensions: [] })}
+                    className="text-[10px] text-rose-600 font-bold hover:underline"
+                  >
+                    Remove Extension
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-medium">Ext. Width</span>
+                    <input
+                      type="number"
+                      value={activeExt.width}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        onChange({
+                          cornerExtensions: [{ ...activeExt, width: val }],
+                        });
+                      }}
+                      className="w-full px-2 py-1 font-mono font-bold bg-white border border-slate-200 rounded text-right"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-medium">Ext. Height</span>
+                    <input
+                      type="number"
+                      value={activeExt.height}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        onChange({
+                          cornerExtensions: [{ ...activeExt, height: val }],
+                        });
+                      }}
+                      className="w-full px-2 py-1 font-mono font-bold bg-white border border-slate-200 rounded text-right"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-medium">Angle</span>
+                    <input
+                      type="text"
+                      readOnly
+                      value="45°"
+                      className="w-full px-2 py-1 font-mono font-bold bg-slate-100 border border-slate-200 rounded text-right text-slate-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,12 +1,34 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { GlassType, ProfileColor, WindowType } from '@/lib/types';
 
-interface WindowCanvasProps {
+export interface WindowCanvasProps {
   type: WindowType;
   width: number; // in mm
   height: number; // in mm
+  leftHeight?: number;
+  rightHeight?: number;
+  topWidth?: number;
+  bottomWidth?: number;
+  slopeAngle?: number;
+  cornerExtensions?: {
+    corner: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
+    type: 'triangle' | 'slope_45' | 'fixed_box';
+    width: number;
+    height: number;
+    angle?: number;
+  }[];
+  onCornerPlus?: (corner: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right') => void;
+  onDimensionsChange?: (dims: {
+    leftHeight?: number;
+    rightHeight?: number;
+    topWidth?: number;
+    bottomWidth?: number;
+    width?: number;
+    height?: number;
+    slopeAngle?: number;
+  }) => void;
   profileBrand?: string;
   profileColor?: ProfileColor;
   glassType?: GlassType;
@@ -21,6 +43,14 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   type = 'sliding_2track',
   width = 1200,
   height = 1500,
+  leftHeight,
+  rightHeight,
+  topWidth,
+  bottomWidth,
+  slopeAngle,
+  cornerExtensions = [],
+  onCornerPlus,
+  onDimensionsChange,
   profileBrand = 'VEKA',
   profileColor = 'pure_white',
   glassType = 'clear_5mm',
@@ -30,32 +60,143 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   showDimensions = true,
   className = '',
 }) => {
-  // Constrain dimensions to reasonable bounds
-  const W = Math.max(400, Math.min(4000, width));
-  const H = Math.max(400, Math.min(4000, height));
+  const BW = Math.max(300, Math.min(4000, bottomWidth !== undefined ? bottomWidth : width));
+  const TW = Math.max(300, Math.min(4000, topWidth !== undefined ? topWidth : width));
+  const LH = Math.max(0, Math.min(4000, leftHeight !== undefined ? leftHeight : height));
+  const RH = Math.max(0, Math.min(4000, rightHeight !== undefined ? rightHeight : height));
 
-  // Canvas coordinate system:
-  // Margin for dimension callouts: 70px top, 70px left, 40px right, 40px bottom
-  const marginX = showDimensions ? 70 : 20;
-  const marginY = showDimensions ? 70 : 20;
-  const totalSvgWidth = W + marginX * 2;
-  const totalSvgHeight = H + marginY * 2;
+  const isAngledShape = LH !== RH || LH === 0 || RH === 0;
+
+  const maxH = Math.max(LH, RH, 400);
+  const maxW = Math.max(BW, TW, 400);
+
+  // SVG coordinate system with margins for 4-side dimension callouts
+  const marginX = showDimensions ? 80 : 35;
+  const marginY = showDimensions ? 80 : 35;
+  const totalSvgWidth = maxW + marginX * 2;
+  const totalSvgHeight = maxH + marginY * 2;
 
   // Frame and Sash face dimensions (in mm)
-  const frameFace = 65;
+  const frameFace = Math.min(65, Math.max(38, Math.round(maxH * 0.08)));
   const sashFace = 68;
 
-  // Window frame bounds inside SVG
+  // Baseline at bottom
   const x0 = marginX;
-  const y0 = marginY;
-  const x1 = marginX + W;
-  const y1 = marginY + H;
+  const y1 = marginY + maxH;
+  const x1 = marginX + BW;
+  const y0 = y1 - maxH;
 
-  // Inner daylight area
+  // Corner coordinates in SVG space
+  const pBL = { x: x0, y: y1 };
+  const pBR = { x: x1, y: y1 };
+  const pTR = { x: x1, y: y1 - RH };
+  const pTL = { x: x0, y: y1 - LH };
+
+  // Angle and hypotenuse calculations
+  const hDiff = Math.abs(RH - LH);
+  const calculatedSlopeAngle = BW > 0 ? (Math.atan(hDiff / BW) * 180) / Math.PI : 0;
+  const hypotenuseLength = Math.round(Math.hypot(BW, hDiff));
+  const isExact45 =
+    Math.abs(calculatedSlopeAngle - 45) < 1 ||
+    (LH === 0 && RH === BW) ||
+    (RH === 0 && LH === BW);
+
+  // Rectangular mode inner daylight area
+  const W = BW;
+  const H = maxH;
   const innerX = x0 + frameFace;
   const innerY = y0 + frameFace;
   const innerW = W - 2 * frameFace;
   const innerH = H - 2 * frameFace;
+
+  // Mouse Dragging for vertex drawing & 45° angle snapping
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [draggingCorner, setDraggingCorner] = useState<
+    'top_left' | 'top_right' | 'bottom_right' | 'bottom_left' | null
+  >(null);
+  const [activeSnapAngle, setActiveSnapAngle] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setDraggingCorner(null);
+      setActiveSnapAngle(null);
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  const handleMouseDown = (
+    corner: 'top_left' | 'top_right' | 'bottom_right' | 'bottom_left',
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingCorner(corner);
+  };
+
+  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!draggingCorner || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const scaleX = totalSvgWidth / rect.width;
+    const scaleY = totalSvgHeight / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+
+    if (draggingCorner === 'top_left') {
+      let newLH = Math.max(0, Math.min(3500, Math.round(y1 - mouseY)));
+      // Check 45 degree snap relative to rightHeight RH and bottomWidth BW
+      const targetDelta = BW;
+      const currentDelta = Math.abs(RH - newLH);
+      if (Math.abs(currentDelta - targetDelta) < 32 || (newLH < 35 && RH === BW)) {
+        newLH = newLH < 35 ? 0 : RH >= BW ? RH - BW : RH + BW;
+        setActiveSnapAngle(45);
+      } else {
+        setActiveSnapAngle(null);
+      }
+      onDimensionsChange?.({
+        leftHeight: newLH,
+        height: Math.max(newLH, RH, 400),
+        slopeAngle: Math.round((Math.atan2(Math.abs(RH - newLH), BW) * 180) / Math.PI),
+      });
+    } else if (draggingCorner === 'top_right') {
+      let newRH = Math.max(0, Math.min(3500, Math.round(y1 - mouseY)));
+      const targetDelta = BW;
+      const currentDelta = Math.abs(newRH - LH);
+      if (Math.abs(currentDelta - targetDelta) < 32 || (newRH < 35 && LH === BW)) {
+        newRH = newRH < 35 ? 0 : LH >= BW ? LH - BW : LH + BW;
+        setActiveSnapAngle(45);
+      } else {
+        setActiveSnapAngle(null);
+      }
+      onDimensionsChange?.({
+        rightHeight: newRH,
+        height: Math.max(LH, newRH, 400),
+        slopeAngle: Math.round((Math.atan2(Math.abs(newRH - LH), BW) * 180) / Math.PI),
+      });
+    } else if (draggingCorner === 'bottom_right') {
+      let newBW = Math.max(300, Math.min(3500, Math.round(mouseX - x0)));
+      const diff = Math.abs(RH - LH);
+      if (diff > 50 && Math.abs(newBW - diff) < 32) {
+        newBW = diff;
+        setActiveSnapAngle(45);
+      } else {
+        setActiveSnapAngle(null);
+      }
+      onDimensionsChange?.({
+        bottomWidth: newBW,
+        topWidth: newBW,
+        width: newBW,
+        slopeAngle: diff > 0 ? Math.round((Math.atan2(diff, newBW) * 180) / Math.PI) : 0,
+      });
+    } else if (draggingCorner === 'bottom_left') {
+      let newBW = Math.max(300, Math.min(3500, Math.round(x1 - mouseX)));
+      onDimensionsChange?.({
+        bottomWidth: newBW,
+        topWidth: newBW,
+        width: newBW,
+      });
+    }
+  };
 
   // Realistic Color mappings
   const profileFillColor = useMemo(() => {
@@ -110,8 +251,10 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
       className={`relative w-full h-full flex items-center justify-center select-none overflow-hidden ${className}`}
     >
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${totalSvgWidth} ${totalSvgHeight}`}
         className="w-full h-full max-h-full drop-shadow-sm transition-all duration-300"
+        onMouseMove={handleSvgMouseMove}
         style={{
           backgroundColor: mode === 'blueprint' ? '#F8FAFC' : '#F1F5F9',
         }}
@@ -210,9 +353,11 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         )}
 
         {/* ================================================================= */}
-        {/* 1. OUTER FRAME (Main Window Perimeter)                           */}
+        {/* 1. OUTER FRAME & SASHES (Standard Rectangular Windows)           */}
         {/* ================================================================= */}
-        <g id="outer-frame">
+        {!isAngledShape ? (
+          <g id="rectangular-window">
+            <g id="outer-frame">
           {/* Outer perimeter */}
           <rect
             x={x0}
@@ -789,46 +934,206 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
             </text>
           </g>
         )}
+      </g>
+    ) : (
+          /* =============================================================== */
+          /* 2. ANGLED / RIGHT-ANGLE TRIANGLE / TRAPEZOID GEOMETRY           */
+          /* =============================================================== */
+          <g id="angled-custom-geometry">
+            {/* Outer Frame Polygon */}
+            <polygon
+              points={
+                LH === 0
+                  ? `${pBL.x},${pBL.y} ${pBR.x},${pBR.y} ${pTR.x},${pTR.y}`
+                  : RH === 0
+                  ? `${pBL.x},${pBL.y} ${pBR.x},${pBR.y} ${pTL.x},${pTL.y}`
+                  : `${pBL.x},${pBL.y} ${pBR.x},${pBR.y} ${pTR.x},${pTR.y} ${pTL.x},${pTL.y}`
+              }
+              fill={profileFillColor}
+              stroke={profileStrokeColor}
+              strokeWidth={mode === 'blueprint' ? 2 : 3}
+              strokeLinejoin="round"
+            />
+
+            {/* Inner Daylight Glass Polygon */}
+            {LH === 0 && (
+              <polygon
+                points={`${pBL.x + frameFace * 2.414},${y1 - frameFace} ${x1 - frameFace},${y1 - frameFace} ${x1 - frameFace},${y1 - RH + frameFace * 2.414}`}
+                fill={glassFill}
+                stroke="#94A3B8"
+                strokeWidth={1.2}
+              />
+            )}
+            {RH === 0 && (
+              <polygon
+                points={`${pBL.x + frameFace},${y1 - frameFace} ${x1 - frameFace * 2.414},${y1 - frameFace} ${pBL.x + frameFace},${y1 - LH + frameFace * 2.414}`}
+                fill={glassFill}
+                stroke="#94A3B8"
+                strokeWidth={1.2}
+              />
+            )}
+            {LH > 0 && RH > 0 && (
+              <polygon
+                points={`${pBL.x + frameFace},${y1 - frameFace} ${x1 - frameFace},${y1 - frameFace} ${x1 - frameFace},${y1 - RH + frameFace} ${pBL.x + frameFace},${y1 - LH + frameFace}`}
+                fill={glassFill}
+                stroke="#94A3B8"
+                strokeWidth={1.2}
+              />
+            )}
+
+            {/* Glass diagonal highlight lines */}
+            <line
+              x1={pBL.x + BW * 0.4}
+              y1={y1 - Math.max(LH, RH) * 0.35 - 15}
+              x2={pBL.x + BW * 0.4 + 50}
+              y2={y1 - Math.max(LH, RH) * 0.35 + 35}
+              stroke="#FFFFFF"
+              strokeWidth={1.5}
+              strokeOpacity={0.7}
+            />
+
+            {/* Drainage Weep Hole */}
+            <rect
+              x={x0 + BW * 0.5 - 15}
+              y={y1 - 10}
+              width={30}
+              height={4}
+              rx={1.5}
+              fill="#475569"
+            />
+
+            {/* Geometry Specification Label */}
+            <text
+              x={x0 + BW / 2}
+              y={y1 - Math.max(LH, RH) / 3}
+              textAnchor="middle"
+              fill="#0A2E8A"
+              fontSize="11"
+              fontWeight="700"
+              letterSpacing="1"
+            >
+              {LH === 0
+                ? '[45° RIGHT ANGLE TRIANGLE - DIRECT GLAZING]'
+                : RH === 0
+                ? '[45° LEFT RAKE TRIANGLE]'
+                : `[${calculatedSlopeAngle.toFixed(1)}° CUSTOM RAKE TRAPEZOID]`}
+            </text>
+          </g>
+        )}
 
         {/* ================================================================= */}
-        {/* 3. TECHNICAL CAD BLUEPRINT DIMENSION EXTENSIONS & CALLOUTS       */}
+        {/* 3. CORNER ATTACHMENTS / EXTENSIONS (IF ANY ACTIVE)                */}
+        {/* ================================================================= */}
+        {cornerExtensions && cornerExtensions.length > 0 && (
+          <g id="corner-extensions">
+            {cornerExtensions.map((ext, idx) => {
+              const extW = ext.width || 400;
+              const extH = ext.height || 400;
+              const isRight = ext.corner.includes('right');
+              const isTop = ext.corner.includes('top');
+              const attachX = isRight ? x1 : x0 - extW;
+              const attachY = isTop ? y0 - extH : y1;
+              return (
+                <g key={`ext-${idx}`}>
+                  <rect
+                    x={attachX}
+                    y={attachY}
+                    width={extW}
+                    height={extH}
+                    fill="url(#clearGrad)"
+                    stroke="#2563EB"
+                    strokeWidth="2"
+                    strokeDasharray="4,3"
+                    rx="3"
+                  />
+                  <line
+                    x1={attachX}
+                    y1={attachY}
+                    x2={attachX + extW}
+                    y2={attachY + extH}
+                    stroke="#2563EB"
+                    strokeWidth="1"
+                    strokeDasharray="2,2"
+                  />
+                  <text
+                    x={attachX + extW / 2}
+                    y={attachY + extH / 2}
+                    textAnchor="middle"
+                    fill="#0A2E8A"
+                    fontSize="10"
+                    fontWeight="bold"
+                  >
+                    + {ext.corner.toUpperCase()} ATTACHMENT ({extW}×{extH})
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+
+        {/* ================================================================= */}
+        {/* 4. 45-DEGREE ANGLE SNAP GUIDE & LIVE DEGREE BADGE                 */}
+        {/* ================================================================= */}
+        {isAngledShape && (
+          <g id="slope-guideline">
+            <line
+              x1={pTL.x}
+              y1={pTL.y}
+              x2={pTR.x}
+              y2={pTR.y}
+              stroke="#0284C7"
+              strokeWidth="2"
+              strokeDasharray="5,3"
+            />
+            <g transform={`translate(${(pTL.x + pTR.x) / 2}, ${(pTL.y + pTR.y) / 2 - 16})`}>
+              <rect
+                x="-45"
+                y="-12"
+                width="90"
+                height="22"
+                rx="11"
+                fill={activeSnapAngle === 45 || isExact45 ? '#0284C7' : '#0F172A'}
+                stroke="#FFFFFF"
+                strokeWidth="1.5"
+                className="drop-shadow-sm"
+              />
+              <text
+                x="0"
+                y="3"
+                textAnchor="middle"
+                fill="#FFFFFF"
+                fontSize="10"
+                fontWeight="800"
+                fontFamily="monospace"
+              >
+                {activeSnapAngle === 45 || isExact45 ? '45.0° SNAP' : `${calculatedSlopeAngle.toFixed(1)}° RAKE`}
+              </text>
+            </g>
+          </g>
+        )}
+
+        {/* ================================================================= */}
+        {/* 5. 4-SIDE TECHNICAL CAD BLUEPRINT MEASUREMENT CALLOUTS            */}
         {/* ================================================================= */}
         {showDimensions && (
           <g id="dimension-callouts">
-            {/* --- TOP WIDTH DIMENSION LINE --- */}
-            {/* Extension lines */}
+            {/* 1. BOTTOM WIDTH DIMENSION */}
+            <line x1={x0} y1={y1 + 5} x2={x0} y2={y1 + 42} stroke="#0A2E8A" strokeWidth="1" />
+            <line x1={x1} y1={y1 + 5} x2={x1} y2={y1 + 42} stroke="#0A2E8A" strokeWidth="1" />
             <line
               x1={x0}
-              y1={y0 - 5}
-              x2={x0}
-              y2={y0 - 45}
-              stroke="#0A2E8A"
-              strokeWidth="1"
-            />
-            <line
-              x1={x1}
-              y1={y0 - 5}
+              y1={y1 + 30}
               x2={x1}
-              y2={y0 - 45}
-              stroke="#0A2E8A"
-              strokeWidth="1"
-            />
-            {/* Horizontal dimension line with arrows */}
-            <line
-              x1={x0}
-              y1={y0 - 32}
-              x2={x1}
-              y2={y0 - 32}
+              y2={y1 + 30}
               stroke="#0A2E8A"
               strokeWidth="1.2"
               markerStart="url(#arrowStart)"
               markerEnd="url(#arrowEnd)"
             />
-            {/* Dimension Text Pill */}
             <rect
-              x={x0 + W / 2 - 50}
-              y={y0 - 44}
-              width={100}
+              x={x0 + BW / 2 - 45}
+              y={y1 + 18}
+              width={90}
               height={24}
               rx={12}
               fill="#FFFFFF"
@@ -836,74 +1141,180 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
               strokeWidth="1"
             />
             <text
-              x={x0 + W / 2}
-              y={y0 - 28}
+              x={x0 + BW / 2}
+              y={y1 + 34}
               textAnchor="middle"
               fill="#0A2E8A"
               fontSize="12"
               fontWeight="700"
               fontFamily="monospace"
             >
-              {W} mm
+              {BW} mm
             </text>
 
-            {/* --- LEFT HEIGHT DIMENSION LINE --- */}
-            <line
-              x1={x0 - 5}
-              y1={y0}
-              x2={x0 - 45}
-              y2={y0}
-              stroke="#0A2E8A"
-              strokeWidth="1"
-            />
-            <line
-              x1={x0 - 5}
-              y1={y1}
-              x2={x0 - 45}
-              y2={y1}
-              stroke="#0A2E8A"
-              strokeWidth="1"
-            />
-            <line
-              x1={x0 - 32}
-              y1={y0}
-              x2={x0 - 32}
-              y2={y1}
-              stroke="#0A2E8A"
-              strokeWidth="1.2"
-              markerStart="url(#arrowStart)"
-              markerEnd="url(#arrowEnd)"
-            />
-            <g
-              transform={`translate(${x0 - 32}, ${y0 + H / 2}) rotate(-90)`}
-            >
-              <rect
-                x="-50"
-                y="-12"
-                width="100"
-                height="24"
-                rx="12"
-                fill="#FFFFFF"
-                stroke="#0A2E8A"
-                strokeWidth="1"
-              />
-              <text
-                x="0"
-                y="4"
-                textAnchor="middle"
-                fill="#0A2E8A"
-                fontSize="12"
-                fontWeight="700"
-                fontFamily="monospace"
-              >
-                {H} mm
-              </text>
-            </g>
+            {/* 2. TOP WIDTH / SLOPED HYPOTENUSE DIMENSION */}
+            {!isAngledShape ? (
+              <>
+                <line x1={x0} y1={y0 - 5} x2={x0} y2={y0 - 45} stroke="#0A2E8A" strokeWidth="1" />
+                <line x1={x1} y1={y0 - 5} x2={x1} y2={y0 - 45} stroke="#0A2E8A" strokeWidth="1" />
+                <line
+                  x1={x0}
+                  y1={y0 - 32}
+                  x2={x1}
+                  y2={y0 - 32}
+                  stroke="#0A2E8A"
+                  strokeWidth="1.2"
+                  markerStart="url(#arrowStart)"
+                  markerEnd="url(#arrowEnd)"
+                />
+                <rect
+                  x={x0 + TW / 2 - 45}
+                  y={y0 - 44}
+                  width={90}
+                  height={24}
+                  rx={12}
+                  fill="#FFFFFF"
+                  stroke="#0A2E8A"
+                  strokeWidth="1"
+                />
+                <text
+                  x={x0 + TW / 2}
+                  y={y0 - 28}
+                  textAnchor="middle"
+                  fill="#0A2E8A"
+                  fontSize="12"
+                  fontWeight="700"
+                  fontFamily="monospace"
+                >
+                  {TW} mm
+                </text>
+              </>
+            ) : (
+              <g transform={`translate(${(pTL.x + pTR.x) / 2}, ${(pTL.y + pTR.y) / 2 - 32})`}>
+                <rect
+                  x="-55"
+                  y="-12"
+                  width="110"
+                  height="24"
+                  rx={12}
+                  fill="#FFFFFF"
+                  stroke="#0A2E8A"
+                  strokeWidth="1.2"
+                />
+                <text
+                  x="0"
+                  y="4"
+                  textAnchor="middle"
+                  fill="#0A2E8A"
+                  fontSize="11"
+                  fontWeight="700"
+                  fontFamily="monospace"
+                >
+                  {hypotenuseLength} mm ({calculatedSlopeAngle.toFixed(1)}°)
+                </text>
+              </g>
+            )}
 
-            {/* Profile Brand & Spec Watermark */}
+            {/* 3. LEFT SIDE HEIGHT DIMENSION */}
+            {LH > 0 ? (
+              <>
+                <line x1={x0 - 5} y1={y1} x2={x0 - 45} y2={y1} stroke="#0A2E8A" strokeWidth="1" />
+                <line x1={x0 - 5} y1={pTL.y} x2={x0 - 45} y2={pTL.y} stroke="#0A2E8A" strokeWidth="1" />
+                <line
+                  x1={x0 - 32}
+                  y1={y1}
+                  x2={x0 - 32}
+                  y2={pTL.y}
+                  stroke="#0A2E8A"
+                  strokeWidth="1.2"
+                  markerStart="url(#arrowStart)"
+                  markerEnd="url(#arrowEnd)"
+                />
+                <g transform={`translate(${x0 - 32}, ${(y1 + pTL.y) / 2}) rotate(-90)`}>
+                  <rect
+                    x="-45"
+                    y="-12"
+                    width="90"
+                    height="24"
+                    rx={12}
+                    fill="#FFFFFF"
+                    stroke="#0A2E8A"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="#0A2E8A"
+                    fontSize="12"
+                    fontWeight="700"
+                    fontFamily="monospace"
+                  >
+                    {LH} mm
+                  </text>
+                </g>
+              </>
+            ) : (
+              <g transform={`translate(${x0 - 35}, ${y1})`}>
+                <rect x="-35" y="-10" width="70" height="20" rx="10" fill="#F1F5F9" stroke="#94A3B8" strokeWidth="1" />
+                <text x="0" y="3" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                  Left: 0 mm
+                </text>
+              </g>
+            )}
+
+            {/* 4. RIGHT SIDE HEIGHT DIMENSION */}
+            {RH > 0 ? (
+              <>
+                <line x1={x1 + 5} y1={y1} x2={x1 + 45} y2={y1} stroke="#0A2E8A" strokeWidth="1" />
+                <line x1={x1 + 5} y1={pTR.y} x2={x1 + 45} y2={pTR.y} stroke="#0A2E8A" strokeWidth="1" />
+                <line
+                  x1={x1 + 32}
+                  y1={y1}
+                  x2={x1 + 32}
+                  y2={pTR.y}
+                  stroke="#0A2E8A"
+                  strokeWidth="1.2"
+                  markerStart="url(#arrowStart)"
+                  markerEnd="url(#arrowEnd)"
+                />
+                <g transform={`translate(${x1 + 32}, ${(y1 + pTR.y) / 2}) rotate(90)`}>
+                  <rect
+                    x="-45"
+                    y="-12"
+                    width="90"
+                    height="24"
+                    rx={12}
+                    fill="#FFFFFF"
+                    stroke="#0A2E8A"
+                    strokeWidth="1"
+                  />
+                  <text
+                    x="0"
+                    y="4"
+                    textAnchor="middle"
+                    fill="#0A2E8A"
+                    fontSize="12"
+                    fontWeight="700"
+                    fontFamily="monospace"
+                  >
+                    {RH} mm
+                  </text>
+                </g>
+              </>
+            ) : (
+              <g transform={`translate(${x1 + 35}, ${y1})`}>
+                <rect x="-35" y="-10" width="70" height="20" rx="10" fill="#F1F5F9" stroke="#94A3B8" strokeWidth="1" />
+                <text x="0" y="3" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="bold" fontFamily="monospace">
+                  Right: 0 mm
+                </text>
+              </g>
+            )}
+
+            {/* Profile Spec Watermark */}
             <text
               x={x1 - 10}
-              y={y1 + 25}
+              y={y1 + 48}
               textAnchor="end"
               fill="#64748B"
               fontSize="10"
@@ -914,6 +1325,98 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
             </text>
           </g>
         )}
+
+        {/* ================================================================= */}
+        {/* 6. CORNER ACTION PLUS (+) BUTTONS ON EVERY CORNER                 */}
+        {/* ================================================================= */}
+        <g id="corner-plus-actions">
+          {[
+            { id: 'top_left' as const, x: pTL.x, y: pTL.y, label: 'Top-Left' },
+            { id: 'top_right' as const, x: pTR.x, y: pTR.y, label: 'Top-Right' },
+            { id: 'bottom_right' as const, x: pBR.x, y: pBR.y, label: 'Bottom-Right' },
+            { id: 'bottom_left' as const, x: pBL.x, y: pBL.y, label: 'Bottom-Left' },
+          ].map((corner) => {
+            const offsetX = corner.id.includes('left') ? -14 : 14;
+            const offsetY = corner.id.includes('top') ? -14 : 14;
+            return (
+              <g
+                key={`plus-${corner.id}`}
+                transform={`translate(${corner.x + offsetX}, ${corner.y + offsetY})`}
+                className="cursor-pointer group transition-transform duration-150"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCornerPlus?.(corner.id);
+                }}
+              >
+                <circle
+                  r="14"
+                  fill="#0A2E8A"
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                  className="group-hover:fill-blue-600 drop-shadow-md"
+                />
+                <line
+                  x1="-5"
+                  y1="0"
+                  x2="5"
+                  y2="0"
+                  stroke="#FFFFFF"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1="0"
+                  y1="-5"
+                  x2="0"
+                  y2="5"
+                  stroke="#FFFFFF"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+                <g
+                  className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  transform="translate(0, -18)"
+                >
+                  <rect x="-42" y="-16" width="84" height="18" rx="9" fill="#0F172A" />
+                  <text
+                    x="0"
+                    y="-4"
+                    textAnchor="middle"
+                    fill="#FFFFFF"
+                    fontSize="9"
+                    fontWeight="bold"
+                  >
+                    + Corner Rake
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* ================================================================= */}
+        {/* 7. INTERACTIVE CORNER VERTEX DRAG HANDLES                         */}
+        {/* ================================================================= */}
+        <g id="vertex-drag-handles">
+          {[
+            { id: 'top_left' as const, x: pTL.x, y: pTL.y, cursor: 'ns-resize' },
+            { id: 'top_right' as const, x: pTR.x, y: pTR.y, cursor: 'ns-resize' },
+            { id: 'bottom_right' as const, x: pBR.x, y: pBR.y, cursor: 'ew-resize' },
+          ].map((h) => (
+            <circle
+              key={`handle-${h.id}`}
+              cx={h.x}
+              cy={h.y}
+              r={draggingCorner === h.id ? 8 : 6}
+              fill={draggingCorner === h.id ? '#2563EB' : '#FFFFFF'}
+              stroke="#0A2E8A"
+              strokeWidth="2.5"
+              style={{ cursor: h.cursor }}
+              onMouseDown={(e) => handleMouseDown(h.id, e)}
+              className="hover:scale-125 transition-transform drop-shadow-sm"
+            />
+          ))}
+        </g>
       </svg>
     </div>
   );

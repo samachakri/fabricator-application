@@ -252,6 +252,28 @@ export default function WindowDesignerPage() {
                   type={windowDesign.type}
                   width={windowDesign.width}
                   height={windowDesign.height}
+                  leftHeight={windowDesign.leftHeight}
+                  rightHeight={windowDesign.rightHeight}
+                  topWidth={windowDesign.topWidth}
+                  bottomWidth={windowDesign.bottomWidth}
+                  slopeAngle={windowDesign.slopeAngle}
+                  cornerExtensions={windowDesign.cornerExtensions}
+                  onCornerPlus={(corner) => {
+                    handleUpdate({
+                      cornerExtensions: [
+                        {
+                          corner,
+                          type: 'triangle',
+                          width: 400,
+                          height: 400,
+                          angle: 45,
+                        },
+                      ],
+                    });
+                  }}
+                  onDimensionsChange={(dims) => {
+                    handleUpdate(dims);
+                  }}
                   profileBrand={windowDesign.profileBrand}
                   profileColor={windowDesign.profileColor}
                   glassType={windowDesign.glassType}

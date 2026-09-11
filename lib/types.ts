@@ -105,6 +105,19 @@ export interface WindowDesign {
   profileSeries?: string; // e.g. "VEKA 84BS"
   width: number; // in mm
   height: number; // in mm
+  leftHeight?: number; // in mm (e.g. 0 to 4000)
+  rightHeight?: number; // in mm (e.g. 0 to 4000)
+  topWidth?: number; // in mm
+  bottomWidth?: number; // in mm
+  slopeAngle?: number; // degrees e.g. 45
+  shapeType?: 'rectangle' | 'right_triangle' | 'trapezoid' | 'custom_polygon';
+  cornerExtensions?: {
+    corner: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
+    type: 'triangle' | 'slope_45' | 'fixed_box';
+    width: number;
+    height: number;
+    angle?: number;
+  }[];
   tracks: number; // 2 or 3
   sashes: number; // 2, 3, 4
   mullions: number; // vertical mullions count
