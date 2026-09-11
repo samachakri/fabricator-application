@@ -8,7 +8,9 @@ import {
   Search,
   ChevronDown,
   Play,
+  Layers,
 } from 'lucide-react';
+import { useStore } from '@/lib/store';
 
 interface DesignQueueItem {
   id: string; // e.g. "ORD-1084"
@@ -287,14 +289,19 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
 
 export default function DesignStudioPage() {
   const router = useRouter();
+  const { projects } = useStore();
   const [queue] = useState<DesignQueueItem[]>(INITIAL_QUEUE_DATA);
-  const [activeTab, setActiveTab] = useState<'all' | 'priority'>('all');
+  const [activeTab, setActiveTab] = useState<'all-designs' | 'all' | 'priority'>('all-designs');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSystem, setSelectedSystem] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
   // Metric counts
+  const designedWindowsCount = useMemo(() => {
+    return projects.reduce((acc, p) => acc + (p.windows?.length || 0), 0);
+  }, [projects]);
+  const allDesignsCount = queue.length + designedWindowsCount;
   const awaitingCount = queue.length; // 19
   const highPriorityCount = queue.filter((item) => item.isHighPriority).length; // 3
 
@@ -348,9 +355,29 @@ export default function DesignStudioPage() {
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Design Studio</h1>
       </div>
 
-      {/* 2 Top Metric Cards matching Screenshot */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: Awaiting Designs */}
+      {/* Top Metric Cards matching Screenshot */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: ALL DESIGNS (Newly added container as requested) */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs relative overflow-hidden flex items-start justify-between">
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+              ALL DESIGNS
+            </span>
+            <div className="flex items-baseline gap-2.5 mt-2">
+              <span className="text-3xl font-black text-slate-900 tracking-tight">
+                {allDesignsCount}
+              </span>
+              <span className="text-xs font-semibold text-slate-500 font-secondary">
+                total designs
+              </span>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Card 2: Awaiting Designs */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs relative overflow-hidden flex items-start justify-between">
           <div>
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
@@ -370,7 +397,7 @@ export default function DesignStudioPage() {
           </div>
         </div>
 
-        {/* Card 2: High Priority */}
+        {/* Card 3: High Priority */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs relative overflow-hidden flex items-start justify-between">
           <div>
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
@@ -393,8 +420,29 @@ export default function DesignStudioPage() {
 
       {/* Filter Toolbar matching Screenshot */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-        {/* Tabs: All Pending (19) vs High Priority (3) */}
+        {/* Tabs: All Designs vs All Pending (19) vs High Priority (3) */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setActiveTab('all-designs');
+              setCurrentPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === 'all-designs'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <span>All Designs</span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                activeTab === 'all-designs' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {allDesignsCount}
+            </span>
+          </button>
+
           <button
             onClick={() => {
               setActiveTab('all');
