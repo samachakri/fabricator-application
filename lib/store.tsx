@@ -28,7 +28,7 @@ interface StoreContextType {
     customerId?: string;
     newCustomer?: Omit<Customer, 'id'>;
     siteAddress: string;
-    projectType: 'Residential' | 'Commercial' | 'Villa';
+    projectType: 'Residential' | 'Commercial' | 'Villa' | 'Builder / Apartment';
     withInitialWindow?: boolean;
     location?: string;
   }) => Project;
@@ -170,7 +170,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     customerId?: string;
     newCustomer?: Omit<Customer, 'id'>;
     siteAddress: string;
-    projectType: 'Residential' | 'Commercial' | 'Villa';
+    projectType: 'Residential' | 'Commercial' | 'Villa' | 'Builder / Apartment';
     withInitialWindow?: boolean;
     location?: string;
   }): Project => {

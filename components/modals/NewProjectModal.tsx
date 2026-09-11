@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
-import { X, Building2, UserPlus, UserCheck } from 'lucide-react';
+import { X, Building2, UserPlus, UserCheck, Compass } from 'lucide-react';
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -29,7 +29,9 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
   const [projectName, setProjectName] = useState('');
   const [siteAddress, setSiteAddress] = useState('');
-  const [projectType, setProjectType] = useState<'Residential' | 'Commercial' | 'Villa'>('Residential');
+  const [projectType, setProjectType] = useState<
+    'Residential' | 'Commercial' | 'Villa' | 'Builder / Apartment'
+  >('Residential');
 
   if (!isOpen) return null;
 
@@ -196,7 +198,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
           {/* Project Details */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-              Project Name *
+              Project Details *
             </label>
             <input
               type="text"
@@ -219,6 +221,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
                 className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A2E8A]/20 focus:border-[#0A2E8A]"
               >
                 <option value="Residential">Residential</option>
+                <option value="Builder / Apartment">Builder / Apartment</option>
                 <option value="Villa">Luxury Villa</option>
                 <option value="Commercial">Commercial / Office</option>
               </select>
@@ -238,15 +241,12 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
           </div>
 
           {/* Design Transition Callout */}
-          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3 flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#0A2E8A] text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
-              CAD
+          <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#0A2E8A] text-white flex items-center justify-center shrink-0">
+              <Compass className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-[#0A2E8A]">Instant Window CAD Design</h4>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                Creates the project and opens 2D CAD canvas to set exact Width, Height, glass, and mesh before generating the final quotation.
-              </p>
+              <h4 className="text-xs font-bold text-[#0A2E8A]">Instant Window Design Studio</h4>
             </div>
           </div>
 

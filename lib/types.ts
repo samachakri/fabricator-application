@@ -254,7 +254,7 @@ export interface Project {
   customerId: string;
   customer: Customer;
   siteAddress: string;
-  projectType: 'Residential' | 'Commercial' | 'Villa';
+  projectType: 'Residential' | 'Commercial' | 'Villa' | 'Builder / Apartment';
   currentStage: ProjectStage;
   status: 'Designing' | 'Quotation Sent' | 'Advance Received' | 'In Production' | 'Completed';
   dealStage?: DealStage;
