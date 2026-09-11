@@ -134,7 +134,7 @@ export default function DashboardPage() {
             {myWorkItems.map((work) => (
               <Link
                 key={work.id}
-                href={`/projects/${work.projectId}`}
+                href={`/projects/${work.projectId}/design/W01`}
                 className="block bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:border-[#0A2E8A]/40 hover:shadow transition-all group"
               >
                 <div className="flex items-center justify-between">
@@ -164,10 +164,10 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900">Recent Projects</h2>
             <Link
-              href="/projects/PRJ-1042"
+              href="/design"
               className="text-xs font-semibold text-[#0A2E8A] hover:underline"
             >
-              View All Projects &rarr;
+              View All in Design Studio &rarr;
             </Link>
           </div>
 
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                       >
                         <td className="px-5 py-4">
                           <Link
-                            href={`/projects/${proj.id}`}
+                            href={`/projects/${proj.id}/design/W01`}
                             className="font-bold text-[#0A2E8A] hover:underline"
                           >
                             {proj.id}
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-5 py-4 text-slate-700 font-medium">
                           <Link
-                            href={`/projects/${proj.id}`}
+                            href={`/projects/${proj.id}/design/W01`}
                             className="hover:text-[#0A2E8A] hover:underline"
                           >
                             {proj.nextAction}

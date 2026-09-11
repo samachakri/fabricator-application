@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   ArrowRight,
   FileText,
+  Plus,
 } from 'lucide-react';
 
 export default function WindowDesignerPage() {
@@ -103,30 +104,71 @@ export default function WindowDesignerPage() {
   const handleDelete = () => {
     if (confirm(`Are you sure you want to delete window ${windowDesign.id}?`)) {
       deleteWindow(projectId, windowId);
-      router.push(`/projects/${projectId}`);
+      const remaining = project.windows.filter((w) => w.id !== windowId);
+      if (remaining.length > 0) {
+        router.push(`/projects/${projectId}/design/${remaining[0].id}`);
+      } else {
+        router.push('/design');
+      }
     }
   };
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-12">
       {/* Sleek, Compact Top Navigation Ribbon (No screen clutter) */}
-      <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
+      <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Back button directly to Design Studio */}
           <Link
-            href={`/projects/${projectId}`}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+            href="/design"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#0A2E8A] transition-colors text-xs font-bold"
+            title="Back to Design Studio"
           >
             <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Design Studio</span>
           </Link>
 
-          <span className="bg-[#0A2E8A] text-white font-mono font-bold text-xs px-2 py-0.5 rounded">
-            {windowDesign.id}
-          </span>
-          <h1 className="font-bold text-slate-900 text-sm">
-            {windowDesign.name}
-          </h1>
-          <span className="text-slate-300 text-xs">•</span>
-          <span className="text-xs text-slate-500 truncate max-w-xs">
+          {/* Window Switcher Tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            {project.windows.map((w) => (
+              <button
+                key={w.id}
+                onClick={() => router.push(`/projects/${projectId}/design/${w.id}`)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  w.id === windowId
+                    ? 'bg-white text-[#0A2E8A] shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="font-mono">{w.id}</span>
+                <span className="hidden md:inline text-[11px] font-normal opacity-80">
+                  {w.name.replace(/Window \d+ \((.*)\)/, '$1')}
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                const nextNum = project.windows.length + 1;
+                const newWin = addWindow(projectId, {
+                  name: `Window 0${nextNum} (2 Track Sliding)`,
+                  type: 'sliding_2track',
+                  width: 1500,
+                  height: 1200,
+                });
+                if (newWin) {
+                  router.push(`/projects/${projectId}/design/${newWin.id}`);
+                }
+              }}
+              className="p-1 px-2 text-slate-600 hover:text-[#0A2E8A] hover:bg-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+              title="Add another window"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Add Window</span>
+            </button>
+          </div>
+
+          <span className="text-slate-300 text-xs hidden lg:inline">•</span>
+          <span className="text-xs text-slate-500 truncate max-w-xs hidden lg:inline font-medium">
             {project.name}
           </span>
         </div>

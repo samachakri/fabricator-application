@@ -502,7 +502,7 @@ export default function SalesPage() {
                     {/* Project & Specifications */}
                     <td className="px-4 py-4">
                       <Link
-                        href={`/projects/${p.id}`}
+                        href={`/projects/${p.id}/design/W01`}
                         className="font-bold text-slate-900 hover:text-[#0A2E8A] transition-colors"
                       >
                         {p.name}

@@ -89,8 +89,9 @@ export default function ProductionPage() {
       <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <Link
-            href={`/projects/${projectId}`}
+            href="/design"
             className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            title="Back to Design Studio"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>

@@ -37,10 +37,12 @@ export default function QuotationPage() {
       {/* Navigation Breadcrumb */}
       <div className="flex items-center gap-3 print:hidden">
         <Link
-          href={`/projects/${projectId}`}
-          className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          href={`/projects/${projectId}/design/${project.windows[0]?.id || 'W01'}`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#0A2E8A] transition-colors text-xs font-bold"
+          title="Back to Window Designer"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
+          <span>Window Designer</span>
         </Link>
         <div>
           <h1 className="text-xl font-bold text-slate-900">
