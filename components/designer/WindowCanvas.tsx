@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { GlassType, ProfileColor, WindowType, WindowDesign } from '@/lib/types';
-import { Move, Plus, MousePointer, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Move, Plus, MousePointer, ZoomIn, ZoomOut, RotateCcw, PenTool } from 'lucide-react';
 
 export interface WindowCanvasProps {
   type: WindowType;
@@ -104,9 +104,17 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     }
   }, [boardX, boardY]);
 
-  // Board toolbar mode: 'modify' (corner resize & snap) | 'move' (drag window) | 'add_window' (click to place new window)
-  const [boardTool, setBoardTool] = useState<'modify' | 'move' | 'add_window'>('modify');
+  // Board toolbar mode: 'modify' (corner resize & snap) | 'draw' (hand/touch draw window edge) | 'move' (drag window) | 'add_window' (click to place new window)
+  const [boardTool, setBoardTool] = useState<'modify' | 'draw' | 'move' | 'add_window'>('modify');
   const [zoom, setZoom] = useState<number>(1.0);
+
+  // Hand / Touch direct window edge drawing state (renders window edge directly, no rough lines!)
+  const [isDrawingWindowEdge, setIsDrawingWindowEdge] = useState(false);
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
+
+  // Pinch-to-zoom distance tracking on mobile/tablets
+  const [touchDistance, setTouchDistance] = useState<number | null>(null);
 
   // Window frame bounds inside local window space
   const marginX = showDimensions ? 80 : 35;
@@ -142,7 +150,7 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   const innerW = W - 2 * frameFace;
   const innerH = H - 2 * frameFace;
 
-  // Mouse Dragging for vertex drawing & 45° angle snapping
+  // Mouse / Pointer Dragging for vertex drawing & 45° angle snapping
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [draggingCorner, setDraggingCorner] = useState<
     'top_left' | 'top_right' | 'bottom_right' | 'bottom_left' | null
@@ -159,19 +167,28 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   } | null>(null);
 
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const handleGlobalPointerUp = () => {
       setDraggingCorner(null);
       setActiveSnapAngle(null);
       if (isDraggingWindow) {
         setIsDraggingWindow(false);
         setDragStart(null);
       }
+      if (isDrawingWindowEdge) {
+        commitDrawnWindowEdge();
+      }
     };
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [isDraggingWindow]);
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('mouseup', handleGlobalPointerUp);
+    window.addEventListener('touchend', handleGlobalPointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('mouseup', handleGlobalPointerUp);
+      window.removeEventListener('touchend', handleGlobalPointerUp);
+    };
+  }, [isDraggingWindow, isDrawingWindowEdge, drawStart, drawCurrent]);
 
-  const getSvgCoords = (e: React.MouseEvent | MouseEvent) => {
+  const getSvgCoords = (e: React.PointerEvent | React.MouseEvent | PointerEvent | MouseEvent | Touch) => {
     if (!svgRef.current) return { x: 0, y: 0 };
     const rect = svgRef.current.getBoundingClientRect();
     const viewBoxWidth = BOARD_W / zoom;
@@ -184,16 +201,51 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     };
   };
 
-  const handleMouseDown = (
+  const commitDrawnWindowEdge = () => {
+    if (drawStart && drawCurrent) {
+      const minX = Math.min(drawStart.x, drawCurrent.x);
+      const minY = Math.min(drawStart.y, drawCurrent.y);
+      let dw = Math.max(300, Math.round(Math.abs(drawCurrent.x - drawStart.x)));
+      let dh = Math.max(300, Math.round(Math.abs(drawCurrent.y - drawStart.y)));
+
+      // 45-degree angle snap
+      const is45 = Math.abs(dw - dh) < 45;
+      if (is45) {
+        const avg = Math.round((dw + dh) / 2);
+        dw = avg;
+        dh = avg;
+      }
+
+      onDimensionsChange?.({
+        width: dw,
+        height: dh,
+        bottomWidth: dw,
+        topWidth: dw,
+        leftHeight: dh,
+        rightHeight: dh,
+        slopeAngle: is45 ? 45 : 0,
+      });
+
+      setWindowPos({ x: Math.round(minX), y: Math.round(minY) });
+      onPositionChange?.({ boardX: Math.round(minX), boardY: Math.round(minY) });
+    }
+
+    setIsDrawingWindowEdge(false);
+    setDrawStart(null);
+    setDrawCurrent(null);
+    setBoardTool('modify');
+  };
+
+  const handleCornerPointerDown = (
     corner: 'top_left' | 'top_right' | 'bottom_right' | 'bottom_left',
-    e: React.MouseEvent
+    e: React.PointerEvent<any> | React.MouseEvent<any>
   ) => {
     e.stopPropagation();
     e.preventDefault();
     setDraggingCorner(corner);
   };
 
-  const handleWindowMouseDown = (e: React.MouseEvent) => {
+  const handleWindowPointerDown = (e: React.PointerEvent<any> | React.MouseEvent<any>) => {
     e.stopPropagation();
     const coords = getSvgCoords(e);
     setIsDraggingWindow(true);
@@ -205,10 +257,27 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     });
   };
 
-  const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleSvgPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (boardTool === 'draw') {
+      e.preventDefault();
+      const coords = getSvgCoords(e);
+      setIsDrawingWindowEdge(true);
+      setDrawStart(coords);
+      setDrawCurrent(coords);
+      return;
+    }
+  };
+
+  const handleSvgPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const coords = getSvgCoords(e);
     const mouseX = coords.x;
     const mouseY = coords.y;
+
+    // Direct Window Edge Drawing (Displays architectural window edge live as user draws with hand/stylus)
+    if (isDrawingWindowEdge && drawStart) {
+      setDrawCurrent(coords);
+      return;
+    }
 
     // Moving window across drafting board
     if (isDraggingWindow && dragStart) {
@@ -283,8 +352,50 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     }
   };
 
+  const handleSvgPointerUp = () => {
+    if (isDrawingWindowEdge) {
+      commitDrawnWindowEdge();
+    }
+  };
+
+  // 2-Finger Touch Pinch-to-Zoom for tablets & mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setTouchDistance(dist);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchDistance !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / touchDistance;
+      setZoom((z) => Math.max(0.45, Math.min(2.5, Number((z * factor).toFixed(2)))));
+      setTouchDistance(dist);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchDistance(null);
+  };
+
+  // Trackpad / Mouse Wheel Zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      setZoom((z) => Math.max(0.45, Math.min(2.5, Number((z + delta).toFixed(2)))));
+    }
+  };
+
   const handleBoardClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (draggingCorner || isDraggingWindow) return;
+    if (draggingCorner || isDraggingWindow || isDrawingWindowEdge) return;
     if (boardTool === 'add_window') {
       const coords = getSvgCoords(e);
       onAddNewWindow?.({
@@ -357,6 +468,21 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     >
       {/* Top Floating CAD Drafting Toolbar */}
       <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-200 shadow-md text-xs">
+        {/* Tool: Draw Window Edge (Hand / Touch on tablet/mobile) */}
+        <button
+          type="button"
+          onClick={() => setBoardTool('draw')}
+          className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+            boardTool === 'draw'
+              ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          title="Draw window edge with Hand / Touch on tablet, laptop or mobile (Renders edge directly)"
+        >
+          <PenTool className="w-3.5 h-3.5" />
+          <span>Draw Edge (Hand/Touch)</span>
+        </button>
+
         {/* Tool: Corner Snap */}
         <button
           type="button"
@@ -414,7 +540,7 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         <div className="flex items-center gap-1 text-slate-500">
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.max(0.5, Number((z - 0.15).toFixed(2))))}
+            onClick={() => setZoom((z) => Math.max(0.45, Number((z - 0.15).toFixed(2))))}
             className="p-1 hover:bg-slate-100 rounded text-slate-700"
             title="Zoom Out"
           >
@@ -442,11 +568,21 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         </div>
       </div>
 
+      {/* Touch / Hand Drawing Banner Hint when in Draw mode */}
+      {boardTool === 'draw' && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-blue-900/90 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg pointer-events-none flex items-center gap-2">
+          <PenTool className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
+          <span>Hand / Touch Mode: Drag your finger or pen to draw window edges</span>
+        </div>
+      )}
+
       <svg
         ref={svgRef}
         viewBox={`0 0 ${BOARD_W / zoom} ${BOARD_H / zoom}`}
-        className={`w-full h-full drop-shadow-sm transition-all duration-150 ${
-          boardTool === 'add_window'
+        className={`w-full h-full drop-shadow-sm transition-all duration-150 touch-none select-none ${
+          boardTool === 'draw'
+            ? 'cursor-crosshair'
+            : boardTool === 'add_window'
             ? 'cursor-crosshair'
             : isDraggingWindow
             ? 'cursor-grabbing'
@@ -454,12 +590,19 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
             ? 'cursor-grab'
             : 'cursor-default'
         }`}
-        onMouseMove={handleSvgMouseMove}
-        onClick={handleBoardClick}
-        onDoubleClick={handleBoardDoubleClick}
         style={{
+          touchAction: 'none',
           backgroundColor: mode === 'blueprint' ? '#F8FAFC' : '#F1F5F9',
         }}
+        onPointerDown={handleSvgPointerDown}
+        onPointerMove={handleSvgPointerMove}
+        onPointerUp={handleSvgPointerUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
+        onClick={handleBoardClick}
+        onDoubleClick={handleBoardDoubleClick}
       >
         <defs>
           {/* Blueprint CAD Grid */}
@@ -629,13 +772,94 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
             })}
 
         {/* ================================================================= */}
+        {/* REAL-TIME ARCHITECTURAL WINDOW EDGE DRAWING (Hand / Touch / Pen)  */}
+        {/* Whatever user draws appears directly as clean window edge!        */}
+        {/* ================================================================= */}
+        {isDrawingWindowEdge && drawStart && drawCurrent && (() => {
+          const minX = Math.min(drawStart.x, drawCurrent.x);
+          const minY = Math.min(drawStart.y, drawCurrent.y);
+          let dw = Math.max(60, Math.round(Math.abs(drawCurrent.x - drawStart.x)));
+          let dh = Math.max(60, Math.round(Math.abs(drawCurrent.y - drawStart.y)));
+          const is45 = Math.abs(dw - dh) < 45;
+          if (is45) {
+            const avg = Math.round((dw + dh) / 2);
+            dw = avg;
+            dh = avg;
+          }
+          const frameF = Math.min(65, Math.max(28, Math.round(dh * 0.08)));
+
+          return (
+            <g id="live-drawn-window-edge" className="pointer-events-none">
+              {/* Outer Architectural Window Profile Edge */}
+              <rect
+                x={minX}
+                y={minY}
+                width={dw}
+                height={dh}
+                fill={profileFillColor}
+                stroke="#0A2E8A"
+                strokeWidth="3.5"
+                rx="3"
+                className="drop-shadow-xl"
+              />
+
+              {/* Inner Daylight Glass Edge */}
+              {dw > frameF * 2 && dh > frameF * 2 && (
+                <rect
+                  x={minX + frameF}
+                  y={minY + frameF}
+                  width={dw - frameF * 2}
+                  height={dh - frameF * 2}
+                  fill={glassFill}
+                  stroke="#94A3B8"
+                  strokeWidth="1.5"
+                />
+              )}
+
+              {/* Miter Joint Corners */}
+              <line x1={minX} y1={minY} x2={minX + frameF} y2={minY + frameF} stroke="#0A2E8A" strokeWidth="1.5" />
+              <line x1={minX + dw} y1={minY} x2={minX + dw - frameF} y2={minY + frameF} stroke="#0A2E8A" strokeWidth="1.5" />
+              <line x1={minX} y1={minY + dh} x2={minX + frameF} y2={minY + dh - frameF} stroke="#0A2E8A" strokeWidth="1.5" />
+              <line x1={minX + dw} y1={minY + dh} x2={minX + dw - frameF} y2={minY + dh - frameF} stroke="#0A2E8A" strokeWidth="1.5" />
+
+              {/* Top Width Edge Callout Pill */}
+              <g transform={`translate(${minX + dw / 2}, ${minY - 18})`}>
+                <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#0A2E8A" stroke="#FFFFFF" strokeWidth="1.5" />
+                <text x="0" y="4" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                  {dw} mm
+                </text>
+              </g>
+
+              {/* Left Height Edge Callout Pill */}
+              <g transform={`translate(${minX - 24}, ${minY + dh / 2}) rotate(-90)`}>
+                <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#0A2E8A" stroke="#FFFFFF" strokeWidth="1.5" />
+                <text x="0" y="4" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="bold" fontFamily="monospace">
+                  {dh} mm
+                </text>
+              </g>
+
+              {/* 45° Snap Badge */}
+              {is45 && (
+                <g transform={`translate(${minX + dw / 2}, ${minY + dh / 2})`}>
+                  <rect x="-55" y="-14" width="110" height="28" rx="14" fill="#0284C7" stroke="#FFFFFF" strokeWidth="2" className="drop-shadow-md" />
+                  <text x="0" y="5" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="800" fontFamily="monospace">
+                    45.0° SNAP
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })()}
+
+        {/* ================================================================= */}
         {/* ACTIVE WINDOW UNIT (Positioned on Drafting Board & Draggable)     */}
         {/* ================================================================= */}
         <g id="active-window-unit" transform={`translate(${windowPos.x}, ${windowPos.y})`}>
           {/* Active Window Move Grip Handle */}
           <g
             className="cursor-grab active:cursor-grabbing select-none group"
-            onMouseDown={handleWindowMouseDown}
+            onPointerDown={handleWindowPointerDown}
+            onMouseDown={handleWindowPointerDown}
             transform={`translate(${x0 + BW / 2}, ${y0 - 58})`}
           >
             <rect
@@ -667,7 +891,8 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
               <g
                 id="outer-frame"
                 className={boardTool === 'move' ? 'cursor-grab active:cursor-grabbing' : undefined}
-                onMouseDown={boardTool === 'move' ? handleWindowMouseDown : undefined}
+                onPointerDown={boardTool === 'move' ? handleWindowPointerDown : undefined}
+                onMouseDown={boardTool === 'move' ? handleWindowPointerDown : undefined}
               >
           {/* Outer perimeter */}
           <rect
@@ -1723,8 +1948,9 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
               stroke="#0A2E8A"
               strokeWidth="2.5"
               style={{ cursor: h.cursor }}
-              onMouseDown={(e) => handleMouseDown(h.id, e)}
-              className="hover:scale-125 transition-transform drop-shadow-sm"
+              onPointerDown={(e) => handleCornerPointerDown(h.id, e)}
+              onMouseDown={(e) => handleCornerPointerDown(h.id, e)}
+              className="hover:scale-125 transition-transform drop-shadow-sm touch-none"
             />
           ))}
         </g>
