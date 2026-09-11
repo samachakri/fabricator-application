@@ -41,14 +41,6 @@ export const WindowControls: React.FC<WindowControlsProps> = ({
     'dimensions' | 'glass' | 'mesh' | 'profile' | 'hardware'
   >('dimensions');
 
-  const windowTypes: { id: WindowType; label: string; desc: string }[] = [
-    { id: 'sliding_2track', label: '2 Track Sliding', desc: '2 Panels Overlapping' },
-    { id: 'sliding_3track', label: '3 Track Sliding', desc: '3 Panels with Mesh Track' },
-    { id: 'casement_single', label: 'Single Casement', desc: 'Outward/Inward Swing' },
-    { id: 'casement_double', label: 'French Double Window', desc: 'Master & Slave Sashes' },
-    { id: 'fixed', label: 'Fixed Window', desc: 'Panoramic Direct Glazing' },
-  ];
-
   const brands: ProfileBrand[] = ['VEKA', 'REHAU', 'KOMMERLING', 'ALUPLAST'];
 
   const colors: { id: ProfileColor; label: string; bg: string; border: string }[] = [
@@ -190,44 +182,8 @@ export const WindowControls: React.FC<WindowControlsProps> = ({
       {/* SECTION 1: MEASUREMENTS & DIMENSIONS */}
       {activeSection === 'dimensions' && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 block">
-              Window Archetype
-            </label>
-            <div className="space-y-1.5">
-              {windowTypes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    const isCasement = t.id.startsWith('casement');
-                    onChange({
-                      type: t.id,
-                      name: t.label,
-                      openingDirection: isCasement ? 'casement_left' : 'sliding_left',
-                      tracks: t.id === 'sliding_3track' ? 3 : t.id === 'sliding_2track' ? 2 : 1,
-                      sashes: t.id === 'sliding_3track' ? 3 : t.id === 'casement_double' ? 2 : t.id === 'casement_single' ? 1 : 2,
-                    });
-                  }}
-                  className={`w-full p-2.5 rounded-xl text-left text-xs transition-all border flex items-center justify-between ${
-                    design.type === t.id
-                      ? 'bg-blue-50/80 border-[#0A2E8A] text-[#0A2E8A] font-bold ring-1 ring-[#0A2E8A]'
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <p className="font-bold">{t.label}</p>
-                    <p className="text-[10px] text-slate-400 font-normal">{t.desc}</p>
-                  </div>
-                  {design.type === t.id && (
-                    <CheckCircle2 className="w-4 h-4 text-[#0A2E8A]" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* 4-Side Parametric Measurements Grid */}
-          <div className="pt-2 border-t border-slate-100 space-y-3">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 4-Side Measurements (mm)
