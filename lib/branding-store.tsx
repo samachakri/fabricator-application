@@ -34,7 +34,7 @@ const DEFAULT_BRANDING: CompanyBranding = {
   address: 'Plot 88, Automotive Park, Hyderabad, India',
   gstin: '36AAECP9921B1Z8',
   poweredByText: 'Powered by FabricatorPro Manufacturing Suite • ISO Certified Automation',
-  subscriptionTier: 'Standard',
+  subscriptionTier: 'Pro',
 };
 
 const STORAGE_KEY = 'fabricator_pro_branding_v1';

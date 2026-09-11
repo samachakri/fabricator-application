@@ -115,12 +115,15 @@ export const TopNav: React.FC = () => {
           <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center font-secondary">
             CR
           </div>
-          <div className="hidden sm:block text-left leading-tight">
+          <div
+            title="Pro Version: 1 credential is limited to 1 person with 2 devices limit"
+            className="hidden sm:block text-left leading-tight cursor-help"
+          >
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-slate-800">Chakradhar</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             </div>
-            <p className="text-[10px] text-slate-400 font-medium">Admin</p>
+            <p className="text-[10px] text-slate-400 font-medium">Admin • Pro (2 Dev Limit)</p>
           </div>
         </div>
       </div>

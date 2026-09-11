@@ -7,14 +7,18 @@ import {
   AlertCircle,
   Search,
   ChevronDown,
-  UserPlus,
   Play,
   ArrowRight,
   Sparkles,
   CheckCircle2,
   Filter,
+  ShieldCheck,
+  Laptop,
+  Smartphone,
+  Info,
+  X,
+  Lock,
 } from 'lucide-react';
-import AssignDrafterModal, { DrafterOption } from '@/components/modals/AssignDrafterModal';
 
 interface DesignQueueItem {
   id: string; // e.g. "ORD-1084"
@@ -28,11 +32,18 @@ interface DesignQueueItem {
     name: string;
     initials: string;
     avatarColor?: string;
-  } | null;
+  };
   isHighPriority: boolean;
   actionType: 'start' | 'continue';
   iconType: 'compass' | 'play';
 }
+
+// Logged-in authenticated user (Pro Version: 1 credential = 1 person with 2 devices limit)
+const LOGGED_IN_DRAFTER = {
+  name: 'Chakradhar',
+  initials: 'CR',
+  avatarColor: 'bg-blue-100 text-[#0A2E8A] border-blue-200',
+};
 
 const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
   {
@@ -43,11 +54,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: '3-Track Sliding (W01-W04)',
     seriesSubtitle: 'Kommerling 88BS',
     profileSystem: 'Kommerling',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -60,11 +67,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: '8-Panel Bi-Fold (FD-01)',
     seriesSubtitle: 'Schüco ASS 70.FD',
     profileSystem: 'Schüco',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: true,
     actionType: 'continue',
     iconType: 'play',
@@ -77,7 +80,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Arched Casement (W-02)',
     seriesSubtitle: 'Prominance Optima',
     profileSystem: 'Prominance',
-    assignedDrafter: null, // Shows + Assign Drafter
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -90,11 +93,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: '2-Track Sliding + Mesh (12 Units)',
     seriesSubtitle: 'VEKA Softline',
     profileSystem: 'VEKA',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: true,
     actionType: 'start',
     iconType: 'compass',
@@ -107,11 +106,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'French Doors & Fixed Louver',
     seriesSubtitle: 'Kommerling',
     profileSystem: 'Kommerling',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'play',
@@ -124,11 +119,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: '3-Track Sliding with Bug Mesh',
     seriesSubtitle: 'VEKA Softline 70',
     profileSystem: 'VEKA',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -141,7 +132,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Casement with Fixed Top Light',
     seriesSubtitle: 'Prominance Optima 60',
     profileSystem: 'Prominance',
-    assignedDrafter: null,
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -154,11 +145,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Corner Window 90-Deg Joint',
     seriesSubtitle: 'Kommerling 76AD',
     profileSystem: 'Kommerling',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'continue',
     iconType: 'play',
@@ -171,11 +158,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Heavy Duty Slide & Fold (6-Panel)',
     seriesSubtitle: 'Schüco ASS 80.FD',
     profileSystem: 'Schüco',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: true,
     actionType: 'start',
     iconType: 'compass',
@@ -188,11 +171,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Tilt & Turn Villa Package (W05-W12)',
     seriesSubtitle: 'Kommerling 88 Plus',
     profileSystem: 'Kommerling',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -205,7 +184,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Motorized Lift & Slide System',
     seriesSubtitle: 'Schüco ASE 60',
     profileSystem: 'Schüco',
-    assignedDrafter: null,
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -218,11 +197,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Standard 2.5 Track Sliding',
     seriesSubtitle: 'Prominance Optima',
     profileSystem: 'Prominance',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'continue',
     iconType: 'play',
@@ -235,11 +210,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Acoustic DGU Casement Windows',
     seriesSubtitle: 'VEKA Softline 82',
     profileSystem: 'VEKA',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -252,7 +223,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'French Balcony Doors with Top Louver',
     seriesSubtitle: 'Kommerling 70',
     profileSystem: 'Kommerling',
-    assignedDrafter: null,
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -265,11 +236,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Panoramic Glass Curtain Wall & Slider',
     seriesSubtitle: 'Schüco ASS 70',
     profileSystem: 'Schüco',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -282,11 +249,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Casement with Mosquito Mesh (5 Units)',
     seriesSubtitle: 'Prominance Optima',
     profileSystem: 'Prominance',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'continue',
     iconType: 'play',
@@ -299,7 +262,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Spanish Style Arched Casement',
     seriesSubtitle: 'VEKA Softline',
     profileSystem: 'VEKA',
-    assignedDrafter: null,
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -312,11 +275,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Sliding Sash Kitchen Windows',
     seriesSubtitle: 'Kommerling',
     profileSystem: 'Kommerling',
-    assignedDrafter: {
-      name: 'Pooja V.',
-      initials: 'PV',
-      avatarColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -329,11 +288,7 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     scopeTitle: 'Master Bedroom Bay Window Design',
     seriesSubtitle: 'Prominance Optima',
     profileSystem: 'Prominance',
-    assignedDrafter: {
-      name: 'Karthik R.',
-      initials: 'KR',
-      avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
-    },
+    assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
     actionType: 'start',
     iconType: 'compass',
@@ -342,19 +297,15 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
 
 export default function DesignStudioPage() {
   const router = useRouter();
-  const [queue, setQueue] = useState<DesignQueueItem[]>(INITIAL_QUEUE_DATA);
+  const [queue] = useState<DesignQueueItem[]>(INITIAL_QUEUE_DATA);
   const [activeTab, setActiveTab] = useState<'all' | 'priority'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSystem, setSelectedSystem] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // Assign Drafter Modal State
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [selectedOrderForAssign, setSelectedOrderForAssign] = useState<DesignQueueItem | null>(null);
-
-  // Success Toast Banner
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // License Details Modal State
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   // Metric counts
   const awaitingCount = queue.length; // 19
@@ -377,8 +328,7 @@ export default function DesignStudioPage() {
         const matchSub = item.projectSubtitle.toLowerCase().includes(q);
         const matchScope = item.scopeTitle.toLowerCase().includes(q);
         const matchSeries = item.seriesSubtitle.toLowerCase().includes(q);
-        const matchDrafter = item.assignedDrafter?.name.toLowerCase().includes(q) || false;
-        if (!matchId && !matchCust && !matchSub && !matchScope && !matchSeries && !matchDrafter) {
+        if (!matchId && !matchCust && !matchSub && !matchScope && !matchSeries) {
           return false;
         }
       }
@@ -394,29 +344,6 @@ export default function DesignStudioPage() {
     return filteredQueue.slice(startIndex, startIndex + pageSize);
   }, [filteredQueue, currentPage, pageSize]);
 
-  // Handle Drafter Assignment
-  const handleAssignDrafter = (drafter: DrafterOption) => {
-    if (!selectedOrderForAssign) return;
-
-    setQueue((prev) =>
-      prev.map((item) =>
-        item.id === selectedOrderForAssign.id
-          ? {
-              ...item,
-              assignedDrafter: {
-                name: drafter.name,
-                initials: drafter.initials,
-                avatarColor: drafter.color,
-              },
-            }
-          : item
-      )
-    );
-
-    setToastMessage(`✓ Assigned ${drafter.name} to order ${selectedOrderForAssign.id}`);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
   // Launch Window Designer
   const handleLaunchDesigner = (item: DesignQueueItem) => {
     router.push(`/projects/${item.projectId}/design/W01`);
@@ -431,24 +358,22 @@ export default function DesignStudioPage() {
           <span className="text-slate-300">&gt;</span>
           <span className="text-slate-800 font-semibold">Design Studio</span>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Design Studio</h1>
-      </div>
-
-      {/* Toast notification if drafter assigned */}
-      {toastMessage && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Design Studio</h1>
+          {/* Pro License Indicator Pill */}
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{toastMessage}</span>
+            <button
+              onClick={() => setIsLicenseModalOpen(true)}
+              className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 flex items-center gap-2 shadow-2xs transition-colors"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold text-[#0A2E8A]">Pro License:</span>
+              <span>1 Person (2 Devices Limit)</span>
+              <Info className="w-3.5 h-3.5 text-slate-400" />
+            </button>
           </div>
-          <button
-            onClick={() => setToastMessage(null)}
-            className="text-emerald-600 hover:text-emerald-900 text-xs font-bold"
-          >
-            Dismiss
-          </button>
         </div>
-      )}
+      </div>
 
       {/* 2 Top Metric Cards matching Screenshot */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -490,6 +415,42 @@ export default function DesignStudioPage() {
           <div className="w-10 h-10 rounded-full bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0">
             <AlertCircle className="w-5 h-5" />
           </div>
+        </div>
+      </div>
+
+      {/* Pro Version 1 Person & 2 Devices License Notice Banner */}
+      <div className="p-4 bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/70 border border-blue-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#0A2540] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-extrabold text-slate-900 text-sm">
+                Pro Version License Active
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-[#0A2E8A] border border-blue-200">
+                1 Credential = 1 Person Only
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                2 Devices Limit
+              </span>
+            </div>
+            <p className="text-slate-600 font-secondary mt-1">
+              Logged-in credential belongs exclusively to <strong>Chakradhar (Admin)</strong>. All orders in the queue are <strong>automatically generated & assigned</strong> to your account with a maximum limit of 2 active devices.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+          <button
+            onClick={() => setIsLicenseModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Active: Device 1 of 2</span>
+            <Info className="w-3.5 h-3.5 text-emerald-600 ml-0.5" />
+          </button>
         </div>
       </div>
 
@@ -587,7 +548,17 @@ export default function DesignStudioPage() {
                 <th className="py-3.5 px-6 font-extrabold">ORDER / LEAD</th>
                 <th className="py-3.5 px-6 font-extrabold">CUSTOMER & PROJECT</th>
                 <th className="py-3.5 px-6 font-extrabold">WINDOW SCOPE & SERIES</th>
-                <th className="py-3.5 px-6 font-extrabold">ASSIGNED DRAFTER</th>
+                <th className="py-3.5 px-6 font-extrabold">
+                  <div className="flex items-center gap-1.5">
+                    <span>ASSIGNED DRAFTER</span>
+                    <span
+                      title="Pro Version: 1 credential is limited to 1 person with 2 devices limit. Designs are automatically assigned to logged-in user Chakradhar."
+                      className="inline-flex items-center text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full tracking-normal normal-case select-none"
+                    >
+                      Auto-Generated • 2 Dev Limit
+                    </span>
+                  </div>
+                </th>
                 <th className="py-3.5 px-6 font-extrabold text-right">ACTION</th>
               </tr>
             </thead>
@@ -626,34 +597,24 @@ export default function DesignStudioPage() {
                       </div>
                     </td>
 
-                    {/* Assigned Drafter */}
+                    {/* Assigned Drafter: Automatically generated for logged-in user in Pro Version */}
                     <td className="py-4 px-6 whitespace-nowrap">
-                      {item.assignedDrafter ? (
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-6 h-6 rounded-full font-bold text-[10px] flex items-center justify-center border font-secondary ${
-                              item.assignedDrafter.avatarColor ||
-                              'bg-slate-100 text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            {item.assignedDrafter.initials}
-                          </div>
-                          <span className="text-xs font-semibold text-slate-700">
-                            {item.assignedDrafter.name}
-                          </span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 text-[#0A2E8A] border border-blue-200 font-bold text-[11px] flex items-center justify-center font-secondary shrink-0">
+                          CR
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedOrderForAssign(item);
-                            setIsAssignModalOpen(true);
-                          }}
-                          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 transition-colors group/btn"
-                        >
-                          <UserPlus className="w-3.5 h-3.5 text-indigo-500 group-hover/btn:scale-110 transition-transform" />
-                          <span>Assign Drafter</span>
-                        </button>
-                      )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-slate-800">Chakradhar</span>
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 bg-blue-100 text-[#0A2E8A] rounded">
+                              You
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 font-secondary mt-0.5">
+                            Auto-assigned • Pro (2 Dev Limit)
+                          </p>
+                        </div>
+                      </div>
                     </td>
 
                     {/* Action Button */}
@@ -721,18 +682,108 @@ export default function DesignStudioPage() {
         </div>
       </div>
 
-      {/* Assign Drafter Modal */}
-      <AssignDrafterModal
-        isOpen={isAssignModalOpen}
-        onClose={() => {
-          setIsAssignModalOpen(false);
-          setSelectedOrderForAssign(null);
-        }}
-        orderId={selectedOrderForAssign?.id || null}
-        customerName={selectedOrderForAssign?.customerName}
-        scopeTitle={selectedOrderForAssign?.scopeTitle}
-        onSelectDrafter={handleAssignDrafter}
-      />
+      {/* Pro Version License & 2-Device Limit Details Modal */}
+      {isLicenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#0A2540] text-white flex items-center justify-center">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Pro Version License</h3>
+                  <p className="text-[11px] text-slate-500 font-secondary">
+                    Single-User Credential Policy
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLicenseModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Authenticated Account Details */}
+              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-blue-900 font-bold">Licensed User</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200/70 text-blue-900">
+                    Chakradhar (Admin)
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  In this Pro Version, each credential is tied strictly to <strong>1 person</strong>. All queue design takeoffs and CAD tasks are <strong>automatically assigned</strong> to your credential.
+                </p>
+              </div>
+
+              {/* 2-Device Limit Allocation */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Device Limit Status (2 Max Allowed)
+                </h4>
+                <div className="space-y-2">
+                  {/* Device 1 (Current) */}
+                  <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                        <Laptop className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">Workstation (Current)</p>
+                        <p className="text-[10px] text-slate-500 font-secondary">
+                          Windows PC • Active Now
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Active
+                    </span>
+                  </div>
+
+                  {/* Device 2 (Available) */}
+                  <div className="p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                        <Smartphone className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-700">Secondary Device</p>
+                        <p className="text-[10px] text-slate-400 font-secondary">
+                          Available for Tablet / Shop Floor Phone
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                      1 Slot Open
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Policy Reminder */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Policy Reminder:</strong> Credential sharing beyond 1 person and more than 2 concurrent device sessions is restricted by Pro licensing security.
+                </span>
+              </div>
+            </div>
+
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setIsLicenseModalOpen(false)}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-[#0A2540] hover:bg-[#06182B] rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

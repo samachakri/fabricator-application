@@ -147,17 +147,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
               CR
             </div>
             <div className="truncate">
-              <p className="text-xs font-semibold text-slate-800 truncate">
-                Chakri Reddy
+              <p className="text-xs font-bold text-slate-800 truncate">
+                Chakradhar
               </p>
               <p className="text-[10px] text-slate-400 truncate">
-                {branding.companyName.split(' ')[0]}
+                Admin • 2 Dev Limit
               </p>
             </div>
           </div>
 
-          <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-            {branding.subscriptionTier}
+          <span
+            title="Pro Version: 1 credential is limited to 1 person with 2 devices limit"
+            className="text-[9px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded cursor-help"
+          >
+            PRO
           </span>
         </div>
       </div>
