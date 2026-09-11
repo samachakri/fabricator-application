@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Design', href: '/projects/PRJ-1042', icon: Compass },
+    { label: 'Design', href: '/design', icon: Compass },
     { label: 'Sales', href: '/sales', icon: Banknote },
     { label: 'Inventory', href: '/inventory', icon: Package },
     { label: 'Quotations', href: '/projects/PRJ-1042/quotation', icon: FileText },
@@ -41,6 +41,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+    if (href === '/design')
+      return (
+        pathname.startsWith('/design') ||
+        (pathname.startsWith('/projects') && pathname.includes('/design'))
+      );
     if (href === '/inventory') return pathname.startsWith('/inventory');
     if (href === '/sales') return pathname.startsWith('/sales');
     if (href === '/settings') return pathname.startsWith('/settings');
@@ -50,7 +55,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
       return (
         pathname.startsWith('/projects') &&
         !pathname.includes('/quotation') &&
-        !pathname.includes('/production')
+        !pathname.includes('/production') &&
+        !pathname.includes('/design')
       );
     return false;
   };

@@ -29,7 +29,7 @@ export const TopNav: React.FC = () => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search quotations, customers, projects..."
+            placeholder="Search orders, clients, profile series..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -58,19 +58,18 @@ export const TopNav: React.FC = () => {
               Matching Records ({filteredProjects.length})
             </div>
             {filteredProjects.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-slate-500 text-center">
-                No matching projects or quotations found.
+              <div className="px-3 py-2 text-xs text-slate-500">
+                No matching projects found
               </div>
             ) : (
               filteredProjects.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => {
+                    router.push(`/projects/${p.id}/quotation`);
                     setShowResults(false);
-                    setQuery('');
-                    router.push(`/projects/${p.id}`);
                   }}
-                  className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between group transition-colors"
+                  className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center justify-between group transition-colors"
                 >
                   <div>
                     <p className="text-xs font-bold text-slate-900 group-hover:text-[#0A2E8A]">
@@ -90,17 +89,8 @@ export const TopNav: React.FC = () => {
         )}
       </div>
 
-      {/* Right Icons matching Screenshot 1: Bell, Help, GST Active pill */}
-      <div className="flex items-center gap-4">
-        {/* Notification Bell */}
-        <button
-          title="Notifications"
-          className="relative p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
-        </button>
-
+      {/* Right Icons: Help, Bell, User Profile Pill matching Screenshot */}
+      <div className="flex items-center gap-3">
         {/* Help Circle */}
         <button
           title="Support & Guides"
@@ -109,12 +99,29 @@ export const TopNav: React.FC = () => {
           <HelpCircle className="w-4 h-4" />
         </button>
 
+        {/* Notification Bell with alert dot */}
+        <button
+          title="Notifications"
+          className="relative p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+        >
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 border-2 border-white rounded-full" />
+        </button>
+
         <div className="h-5 w-px bg-slate-200" />
 
-        {/* GST Active Pill matching Screenshot 1 */}
-        <div className="px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5 select-none">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>GST Active</span>
+        {/* User profile pill matching Stitch screenshot */}
+        <div className="flex items-center gap-2.5 pl-1">
+          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center font-secondary">
+            CR
+          </div>
+          <div className="hidden sm:block text-left leading-tight">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-800">Chakradhar</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium">Admin</p>
+          </div>
         </div>
       </div>
     </header>
