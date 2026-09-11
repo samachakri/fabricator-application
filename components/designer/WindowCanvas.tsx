@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { GlassType, ProfileColor, WindowType } from '@/lib/types';
+import { GlassType, ProfileColor, WindowType, WindowDesign } from '@/lib/types';
+import { Move, Plus, MousePointer, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 export interface WindowCanvasProps {
   type: WindowType;
@@ -19,6 +20,13 @@ export interface WindowCanvasProps {
     height: number;
     angle?: number;
   }[];
+  boardX?: number;
+  boardY?: number;
+  allWindows?: WindowDesign[];
+  activeWindowId?: string;
+  onSelectWindow?: (id: string) => void;
+  onAddNewWindow?: (pos?: { x: number; y: number }) => void;
+  onPositionChange?: (pos: { boardX: number; boardY: number }) => void;
   onCornerPlus?: (corner: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right') => void;
   onDimensionsChange?: (dims: {
     leftHeight?: number;
@@ -49,6 +57,13 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   bottomWidth,
   slopeAngle,
   cornerExtensions = [],
+  boardX,
+  boardY,
+  allWindows = [],
+  activeWindowId = 'W01',
+  onSelectWindow,
+  onAddNewWindow,
+  onPositionChange,
   onCornerPlus,
   onDimensionsChange,
   profileBrand = 'VEKA',
@@ -70,23 +85,41 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   const maxH = Math.max(LH, RH, 400);
   const maxW = Math.max(BW, TW, 400);
 
-  // SVG coordinate system with margins for 4-side dimension callouts
+  // Large CAD drafting board size allowing multiple windows and spacious dragging
+  const BOARD_W = Math.max(3400, maxW * 2.8);
+  const BOARD_H = Math.max(2200, maxH * 2.2);
+
+  // Active window position on drafting board (draggable)
+  const [windowPos, setWindowPos] = useState({
+    x: boardX !== undefined ? boardX : 380,
+    y: boardY !== undefined ? boardY : 300,
+  });
+
+  useEffect(() => {
+    if (boardX !== undefined || boardY !== undefined) {
+      setWindowPos({
+        x: boardX !== undefined ? boardX : 380,
+        y: boardY !== undefined ? boardY : 300,
+      });
+    }
+  }, [boardX, boardY]);
+
+  // Board toolbar mode: 'modify' (corner resize & snap) | 'move' (drag window) | 'add_window' (click to place new window)
+  const [boardTool, setBoardTool] = useState<'modify' | 'move' | 'add_window'>('modify');
+  const [zoom, setZoom] = useState<number>(1.0);
+
+  // Window frame bounds inside local window space
   const marginX = showDimensions ? 80 : 35;
   const marginY = showDimensions ? 80 : 35;
-  const totalSvgWidth = maxW + marginX * 2;
-  const totalSvgHeight = maxH + marginY * 2;
-
-  // Frame and Sash face dimensions (in mm)
   const frameFace = Math.min(65, Math.max(38, Math.round(maxH * 0.08)));
   const sashFace = 68;
 
-  // Baseline at bottom
   const x0 = marginX;
   const y1 = marginY + maxH;
   const x1 = marginX + BW;
   const y0 = y1 - maxH;
 
-  // Corner coordinates in SVG space
+  // Corner coordinates in local window space
   const pBL = { x: x0, y: y1 };
   const pBR = { x: x1, y: y1 };
   const pTR = { x: x1, y: y1 - RH };
@@ -116,14 +149,40 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
   >(null);
   const [activeSnapAngle, setActiveSnapAngle] = useState<number | null>(null);
 
+  // Window body dragging state (repositioning window across drafting board)
+  const [isDraggingWindow, setIsDraggingWindow] = useState(false);
+  const [dragStart, setDragStart] = useState<{
+    mouseX: number;
+    mouseY: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       setDraggingCorner(null);
       setActiveSnapAngle(null);
+      if (isDraggingWindow) {
+        setIsDraggingWindow(false);
+        setDragStart(null);
+      }
     };
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, []);
+  }, [isDraggingWindow]);
+
+  const getSvgCoords = (e: React.MouseEvent | MouseEvent) => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const rect = svgRef.current.getBoundingClientRect();
+    const viewBoxWidth = BOARD_W / zoom;
+    const viewBoxHeight = BOARD_H / zoom;
+    const scaleX = viewBoxWidth / rect.width;
+    const scaleY = viewBoxHeight / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
 
   const handleMouseDown = (
     corner: 'top_left' | 'top_right' | 'bottom_right' | 'bottom_left',
@@ -134,17 +193,43 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     setDraggingCorner(corner);
   };
 
+  const handleWindowMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const coords = getSvgCoords(e);
+    setIsDraggingWindow(true);
+    setDragStart({
+      mouseX: coords.x,
+      mouseY: coords.y,
+      startX: windowPos.x,
+      startY: windowPos.y,
+    });
+  };
+
   const handleSvgMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!draggingCorner || !svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const scaleX = totalSvgWidth / rect.width;
-    const scaleY = totalSvgHeight / rect.height;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    const mouseY = (e.clientY - rect.top) * scaleY;
+    const coords = getSvgCoords(e);
+    const mouseX = coords.x;
+    const mouseY = coords.y;
+
+    // Moving window across drafting board
+    if (isDraggingWindow && dragStart) {
+      const dx = mouseX - dragStart.mouseX;
+      const dy = mouseY - dragStart.mouseY;
+      const newX = Math.max(40, Math.min(BOARD_W - maxW - 40, Math.round(dragStart.startX + dx)));
+      const newY = Math.max(40, Math.min(BOARD_H - maxH - 40, Math.round(dragStart.startY + dy)));
+      setWindowPos({ x: newX, y: newY });
+      onPositionChange?.({ boardX: newX, boardY: newY });
+      return;
+    }
+
+    // Dragging corner vertices for sizing and 45° angle snapping
+    if (!draggingCorner) return;
+
+    // Coordinates relative to the window origin
+    const relX = mouseX - windowPos.x;
+    const relY = mouseY - windowPos.y;
 
     if (draggingCorner === 'top_left') {
-      let newLH = Math.max(0, Math.min(3500, Math.round(y1 - mouseY)));
-      // Check 45 degree snap relative to rightHeight RH and bottomWidth BW
+      let newLH = Math.max(0, Math.min(3500, Math.round(y1 - relY)));
       const targetDelta = BW;
       const currentDelta = Math.abs(RH - newLH);
       if (Math.abs(currentDelta - targetDelta) < 32 || (newLH < 35 && RH === BW)) {
@@ -159,7 +244,7 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         slopeAngle: Math.round((Math.atan2(Math.abs(RH - newLH), BW) * 180) / Math.PI),
       });
     } else if (draggingCorner === 'top_right') {
-      let newRH = Math.max(0, Math.min(3500, Math.round(y1 - mouseY)));
+      let newRH = Math.max(0, Math.min(3500, Math.round(y1 - relY)));
       const targetDelta = BW;
       const currentDelta = Math.abs(newRH - LH);
       if (Math.abs(currentDelta - targetDelta) < 32 || (newRH < 35 && LH === BW)) {
@@ -174,7 +259,7 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         slopeAngle: Math.round((Math.atan2(Math.abs(newRH - LH), BW) * 180) / Math.PI),
       });
     } else if (draggingCorner === 'bottom_right') {
-      let newBW = Math.max(300, Math.min(3500, Math.round(mouseX - x0)));
+      let newBW = Math.max(300, Math.min(3500, Math.round(relX - x0)));
       const diff = Math.abs(RH - LH);
       if (diff > 50 && Math.abs(newBW - diff) < 32) {
         newBW = diff;
@@ -189,13 +274,33 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         slopeAngle: diff > 0 ? Math.round((Math.atan2(diff, newBW) * 180) / Math.PI) : 0,
       });
     } else if (draggingCorner === 'bottom_left') {
-      let newBW = Math.max(300, Math.min(3500, Math.round(x1 - mouseX)));
+      let newBW = Math.max(300, Math.min(3500, Math.round(x1 - relX)));
       onDimensionsChange?.({
         bottomWidth: newBW,
         topWidth: newBW,
         width: newBW,
       });
     }
+  };
+
+  const handleBoardClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (draggingCorner || isDraggingWindow) return;
+    if (boardTool === 'add_window') {
+      const coords = getSvgCoords(e);
+      onAddNewWindow?.({
+        x: Math.max(80, Math.round(coords.x - 300)),
+        y: Math.max(80, Math.round(coords.y - 200)),
+      });
+      setBoardTool('modify');
+    }
+  };
+
+  const handleBoardDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const coords = getSvgCoords(e);
+    onAddNewWindow?.({
+      x: Math.max(80, Math.round(coords.x - 300)),
+      y: Math.max(80, Math.round(coords.y - 200)),
+    });
   };
 
   // Realistic Color mappings
@@ -250,11 +355,108 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
     <div
       className={`relative w-full h-full flex items-center justify-center select-none overflow-hidden ${className}`}
     >
+      {/* Top Floating CAD Drafting Toolbar */}
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-slate-200 shadow-md text-xs">
+        {/* Tool: Corner Snap */}
+        <button
+          type="button"
+          onClick={() => setBoardTool('modify')}
+          className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+            boardTool === 'modify'
+              ? 'bg-[#0A2E8A] text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          title="Drag corner nodes to resize & snap 45°"
+        >
+          <MousePointer className="w-3.5 h-3.5" />
+          <span>Corner Snap</span>
+        </button>
+
+        {/* Tool: Drag Move Window */}
+        <button
+          type="button"
+          onClick={() => setBoardTool('move')}
+          className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+            boardTool === 'move'
+              ? 'bg-[#0A2E8A] text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          title="Drag the window to move anywhere on the board"
+        >
+          <Move className="w-3.5 h-3.5" />
+          <span>Move Window</span>
+        </button>
+
+        {/* Tool: Click to Place Window */}
+        <button
+          type="button"
+          onClick={() => {
+            if (boardTool === 'add_window') {
+              setBoardTool('modify');
+            } else {
+              setBoardTool('add_window');
+            }
+          }}
+          className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all ${
+            boardTool === 'add_window'
+              ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-xs'
+              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+          }`}
+          title="Click anywhere on the board to place a new window"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{boardTool === 'add_window' ? 'Click Board to Place' : 'Click to Add Window'}</span>
+        </button>
+
+        <div className="h-4 w-px bg-slate-200" />
+
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1 text-slate-500">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(0.5, Number((z - 0.15).toFixed(2))))}
+            className="p-1 hover:bg-slate-100 rounded text-slate-700"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <span className="font-mono text-[11px] font-bold px-1 text-slate-600">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(2.0, Number((z + 0.15).toFixed(2))))}
+            className="p-1 hover:bg-slate-100 rounded text-slate-700"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom(1)}
+            className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-800"
+            title="Reset Zoom"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${totalSvgWidth} ${totalSvgHeight}`}
-        className="w-full h-full max-h-full drop-shadow-sm transition-all duration-300"
+        viewBox={`0 0 ${BOARD_W / zoom} ${BOARD_H / zoom}`}
+        className={`w-full h-full drop-shadow-sm transition-all duration-150 ${
+          boardTool === 'add_window'
+            ? 'cursor-crosshair'
+            : isDraggingWindow
+            ? 'cursor-grabbing'
+            : boardTool === 'move'
+            ? 'cursor-grab'
+            : 'cursor-default'
+        }`}
         onMouseMove={handleSvgMouseMove}
+        onClick={handleBoardClick}
+        onDoubleClick={handleBoardDoubleClick}
         style={{
           backgroundColor: mode === 'blueprint' ? '#F8FAFC' : '#F1F5F9',
         }}
@@ -346,18 +548,127 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
         {/* Blueprint background grid */}
         {mode === 'blueprint' && (
           <rect
-            width={totalSvgWidth}
-            height={totalSvgHeight}
+            width={BOARD_W * 2}
+            height={BOARD_H * 2}
             fill="url(#cadGrid)"
           />
         )}
 
+        {/* Render other windows in the project on the drafting board */}
+        {allWindows &&
+          allWindows
+            .filter((w) => w.id !== activeWindowId)
+            .map((w, index) => {
+              const otherX = w.boardX !== undefined ? w.boardX : (index + 1) * (maxW + 450);
+              const otherY = w.boardY !== undefined ? w.boardY : windowPos.y;
+              const otherW = w.bottomWidth || w.width || 1200;
+              const otherH = w.leftHeight || w.height || 1200;
+              return (
+                <g
+                  key={`other-win-${w.id}`}
+                  transform={`translate(${otherX}, ${otherY})`}
+                  className="cursor-pointer group opacity-75 hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectWindow?.(w.id);
+                  }}
+                >
+                  <rect
+                    x="0"
+                    y="0"
+                    width={otherW}
+                    height={otherH}
+                    fill="#FFFFFF"
+                    stroke="#64748B"
+                    strokeWidth="2.5"
+                    strokeDasharray="6,4"
+                    rx="4"
+                  />
+                  <rect
+                    x="20"
+                    y="20"
+                    width={Math.max(20, otherW - 40)}
+                    height={Math.max(20, otherH - 40)}
+                    fill="url(#clearGrad)"
+                    stroke="#CBD5E1"
+                    strokeWidth="1.5"
+                  />
+                  <g transform={`translate(${otherW / 2}, ${otherH / 2})`}>
+                    <rect
+                      x="-75"
+                      y="-18"
+                      width="150"
+                      height="36"
+                      rx="8"
+                      fill="#0A2E8A"
+                      className="group-hover:fill-blue-600 drop-shadow-md"
+                    />
+                    <text
+                      x="0"
+                      y="-3"
+                      textAnchor="middle"
+                      fill="#FFFFFF"
+                      fontSize="11"
+                      fontWeight="bold"
+                    >
+                      {w.id} • {w.name.replace(/Window \d+ \((.*)\)/, '$1')}
+                    </text>
+                    <text
+                      x="0"
+                      y="11"
+                      textAnchor="middle"
+                      fill="#93C5FD"
+                      fontSize="10"
+                      fontFamily="monospace"
+                    >
+                      {otherW} × {otherH} mm (Click to Edit)
+                    </text>
+                  </g>
+                </g>
+              );
+            })}
+
         {/* ================================================================= */}
-        {/* 1. OUTER FRAME & SASHES (Standard Rectangular Windows)           */}
+        {/* ACTIVE WINDOW UNIT (Positioned on Drafting Board & Draggable)     */}
         {/* ================================================================= */}
-        {!isAngledShape ? (
-          <g id="rectangular-window">
-            <g id="outer-frame">
+        <g id="active-window-unit" transform={`translate(${windowPos.x}, ${windowPos.y})`}>
+          {/* Active Window Move Grip Handle */}
+          <g
+            className="cursor-grab active:cursor-grabbing select-none group"
+            onMouseDown={handleWindowMouseDown}
+            transform={`translate(${x0 + BW / 2}, ${y0 - 58})`}
+          >
+            <rect
+              x="-95"
+              y="-15"
+              width="190"
+              height="28"
+              rx="14"
+              fill="#0A2E8A"
+              className="group-hover:fill-blue-700 transition-colors drop-shadow-md"
+            />
+            <text
+              x="0"
+              y="4"
+              textAnchor="middle"
+              fill="#FFFFFF"
+              fontSize="11"
+              fontWeight="bold"
+            >
+              ⠿ {activeWindowId} • Drag to Move
+            </text>
+          </g>
+
+          {/* =============================================================== */}
+          {/* 1. OUTER FRAME & SASHES (Standard Rectangular Windows)         */}
+          {/* =============================================================== */}
+          {!isAngledShape ? (
+            <g id="rectangular-window">
+              <g
+                id="outer-frame"
+                className={boardTool === 'move' ? 'cursor-grab active:cursor-grabbing' : undefined}
+                onMouseDown={boardTool === 'move' ? handleWindowMouseDown : undefined}
+              >
           {/* Outer perimeter */}
           <rect
             x={x0}
@@ -1416,6 +1727,7 @@ export const WindowCanvas: React.FC<WindowCanvasProps> = ({
               className="hover:scale-125 transition-transform drop-shadow-sm"
             />
           ))}
+        </g>
         </g>
       </svg>
     </div>

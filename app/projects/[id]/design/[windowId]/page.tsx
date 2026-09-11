@@ -114,7 +114,7 @@ export default function WindowDesignerPage() {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-12">
+    <div className="space-y-4 w-full px-3 sm:px-6 pb-12">
       {/* Sleek, Compact Top Navigation Ribbon (No screen clutter) */}
       <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
@@ -239,15 +239,15 @@ export default function WindowDesignerPage() {
         </div>
       </div>
 
-      {/* Main Designer Studio */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Interactive Canvas (8 Cols) */}
-        <div className="lg:col-span-8 space-y-3">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm min-h-[560px] flex flex-col justify-between">
+      {/* Main Designer Studio: 65% Left Canvas / 35% Right Configurator */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start w-full">
+        {/* Left: Interactive Canvas (65% Width) */}
+        <div className="w-full lg:w-[65%] space-y-3">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm min-h-[720px] h-[calc(100vh-170px)] flex flex-col justify-between">
             {activeTab === 'room' ? (
               <RoomVisualizer windowDesign={windowDesign} />
             ) : (
-              <div className="w-full h-[500px] flex items-center justify-center">
+              <div className="w-full flex-1 min-h-[580px] relative overflow-hidden rounded-xl">
                 <WindowCanvas
                   type={windowDesign.type}
                   width={windowDesign.width}
@@ -258,6 +258,30 @@ export default function WindowDesignerPage() {
                   bottomWidth={windowDesign.bottomWidth}
                   slopeAngle={windowDesign.slopeAngle}
                   cornerExtensions={windowDesign.cornerExtensions}
+                  boardX={windowDesign.boardX}
+                  boardY={windowDesign.boardY}
+                  allWindows={project.windows}
+                  activeWindowId={windowDesign.id}
+                  onSelectWindow={(targetId) => {
+                    router.push(`/projects/${projectId}/design/${targetId}`);
+                  }}
+                  onAddNewWindow={(pos) => {
+                    const nextNum = project.windows.length + 1;
+                    const created = addWindow(projectId, {
+                      name: `Window 0${nextNum} (2 Track Sliding)`,
+                      type: 'sliding_2track',
+                      width: 1500,
+                      height: 1200,
+                      boardX: pos?.x,
+                      boardY: pos?.y,
+                    });
+                    if (created) {
+                      router.push(`/projects/${projectId}/design/${created.id}`);
+                    }
+                  }}
+                  onPositionChange={(pos) => {
+                    handleUpdate(pos);
+                  }}
                   onCornerPlus={(corner) => {
                     handleUpdate({
                       cornerExtensions: [
@@ -310,8 +334,8 @@ export default function WindowDesignerPage() {
           </div>
         </div>
 
-        {/* Right: Step-by-Step Configurator Controls (4 Cols) */}
-        <div className="lg:col-span-4">
+        {/* Right: Step-by-Step Configurator Controls (35% Width) */}
+        <div className="w-full lg:w-[35%]">
           <WindowControls
             design={windowDesign}
             onChange={handleUpdate}

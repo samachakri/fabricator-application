@@ -111,6 +111,8 @@ export interface WindowDesign {
   bottomWidth?: number; // in mm
   slopeAngle?: number; // degrees e.g. 45
   shapeType?: 'rectangle' | 'right_triangle' | 'trapezoid' | 'custom_polygon';
+  boardX?: number; // Board position X in mm
+  boardY?: number; // Board position Y in mm
   cornerExtensions?: {
     corner: 'top_left' | 'top_right' | 'bottom_left' | 'bottom_right';
     type: 'triangle' | 'slope_45' | 'fixed_box';
