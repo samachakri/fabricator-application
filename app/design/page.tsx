@@ -8,16 +8,6 @@ import {
   Search,
   ChevronDown,
   Play,
-  ArrowRight,
-  Sparkles,
-  CheckCircle2,
-  Filter,
-  ShieldCheck,
-  Laptop,
-  Smartphone,
-  Info,
-  X,
-  Lock,
 } from 'lucide-react';
 
 interface DesignQueueItem {
@@ -38,11 +28,11 @@ interface DesignQueueItem {
   iconType: 'compass' | 'play';
 }
 
-// Logged-in authenticated user (Pro Version: 1 credential = 1 person with 2 devices limit)
+// Drafter automatically assigned for logged-in user
 const LOGGED_IN_DRAFTER = {
   name: 'Chakradhar',
   initials: 'CR',
-  avatarColor: 'bg-blue-100 text-[#0A2E8A] border-blue-200',
+  avatarColor: 'bg-slate-100 text-slate-700 border-slate-300',
 };
 
 const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
@@ -304,9 +294,6 @@ export default function DesignStudioPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
-  // License Details Modal State
-  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
-
   // Metric counts
   const awaitingCount = queue.length; // 19
   const highPriorityCount = queue.filter((item) => item.isHighPriority).length; // 3
@@ -358,21 +345,7 @@ export default function DesignStudioPage() {
           <span className="text-slate-300">&gt;</span>
           <span className="text-slate-800 font-semibold">Design Studio</span>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Design Studio</h1>
-          {/* Pro License Indicator Pill */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsLicenseModalOpen(true)}
-              className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 flex items-center gap-2 shadow-2xs transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-bold text-[#0A2E8A]">Pro License:</span>
-              <span>1 Person (2 Devices Limit)</span>
-              <Info className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-          </div>
-        </div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Design Studio</h1>
       </div>
 
       {/* 2 Top Metric Cards matching Screenshot */}
@@ -415,42 +388,6 @@ export default function DesignStudioPage() {
           <div className="w-10 h-10 rounded-full bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0">
             <AlertCircle className="w-5 h-5" />
           </div>
-        </div>
-      </div>
-
-      {/* Pro Version 1 Person & 2 Devices License Notice Banner */}
-      <div className="p-4 bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/70 border border-blue-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-xs">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#0A2540] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-extrabold text-slate-900 text-sm">
-                Pro Version License Active
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-[#0A2E8A] border border-blue-200">
-                1 Credential = 1 Person Only
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                2 Devices Limit
-              </span>
-            </div>
-            <p className="text-slate-600 font-secondary mt-1">
-              Logged-in credential belongs exclusively to <strong>Chakradhar (Admin)</strong>. All orders in the queue are <strong>automatically generated & assigned</strong> to your account with a maximum limit of 2 active devices.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
-          <button
-            onClick={() => setIsLicenseModalOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-colors"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Active: Device 1 of 2</span>
-            <Info className="w-3.5 h-3.5 text-emerald-600 ml-0.5" />
-          </button>
         </div>
       </div>
 
@@ -548,17 +485,7 @@ export default function DesignStudioPage() {
                 <th className="py-3.5 px-6 font-extrabold">ORDER / LEAD</th>
                 <th className="py-3.5 px-6 font-extrabold">CUSTOMER & PROJECT</th>
                 <th className="py-3.5 px-6 font-extrabold">WINDOW SCOPE & SERIES</th>
-                <th className="py-3.5 px-6 font-extrabold">
-                  <div className="flex items-center gap-1.5">
-                    <span>ASSIGNED DRAFTER</span>
-                    <span
-                      title="Pro Version: 1 credential is limited to 1 person with 2 devices limit. Designs are automatically assigned to logged-in user Chakradhar."
-                      className="inline-flex items-center text-[10px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full tracking-normal normal-case select-none"
-                    >
-                      Auto-Generated • 2 Dev Limit
-                    </span>
-                  </div>
-                </th>
+                <th className="py-3.5 px-6 font-extrabold">ASSIGNED DRAFTER</th>
                 <th className="py-3.5 px-6 font-extrabold text-right">ACTION</th>
               </tr>
             </thead>
@@ -597,23 +524,15 @@ export default function DesignStudioPage() {
                       </div>
                     </td>
 
-                    {/* Assigned Drafter: Automatically generated for logged-in user in Pro Version */}
+                    {/* Assigned Drafter: Automatically generated for logged-in user Chakradhar */}
                     <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 text-[#0A2E8A] border border-blue-200 font-bold text-[11px] flex items-center justify-center font-secondary shrink-0">
-                          CR
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 border border-slate-300 font-bold text-[10px] flex items-center justify-center font-secondary">
+                          {item.assignedDrafter.initials}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-800">Chakradhar</span>
-                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 bg-blue-100 text-[#0A2E8A] rounded">
-                              You
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-500 font-secondary mt-0.5">
-                            Auto-assigned • Pro (2 Dev Limit)
-                          </p>
-                        </div>
+                        <span className="text-xs font-semibold text-slate-700">
+                          {item.assignedDrafter.name}
+                        </span>
                       </div>
                     </td>
 
@@ -681,109 +600,6 @@ export default function DesignStudioPage() {
           </div>
         </div>
       </div>
-
-      {/* Pro Version License & 2-Device Limit Details Modal */}
-      {isLicenseModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#0A2540] text-white flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Pro Version License</h3>
-                  <p className="text-[11px] text-slate-500 font-secondary">
-                    Single-User Credential Policy
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsLicenseModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Authenticated Account Details */}
-              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-blue-900 font-bold">Licensed User</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200/70 text-blue-900">
-                    Chakradhar (Admin)
-                  </span>
-                </div>
-                <p className="text-[11px] text-blue-800 leading-relaxed">
-                  In this Pro Version, each credential is tied strictly to <strong>1 person</strong>. All queue design takeoffs and CAD tasks are <strong>automatically assigned</strong> to your credential.
-                </p>
-              </div>
-
-              {/* 2-Device Limit Allocation */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Device Limit Status (2 Max Allowed)
-                </h4>
-                <div className="space-y-2">
-                  {/* Device 1 (Current) */}
-                  <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/40 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                        <Laptop className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">Workstation (Current)</p>
-                        <p className="text-[10px] text-slate-500 font-secondary">
-                          Windows PC • Active Now
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Active
-                    </span>
-                  </div>
-
-                  {/* Device 2 (Available) */}
-                  <div className="p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
-                        <Smartphone className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-700">Secondary Device</p>
-                        <p className="text-[10px] text-slate-400 font-secondary">
-                          Available for Tablet / Shop Floor Phone
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                      1 Slot Open
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Policy Reminder */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
-                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Policy Reminder:</strong> Credential sharing beyond 1 person and more than 2 concurrent device sessions is restricted by Pro licensing security.
-                </span>
-              </div>
-            </div>
-
-            <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setIsLicenseModalOpen(false)}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-[#0A2540] hover:bg-[#06182B] rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

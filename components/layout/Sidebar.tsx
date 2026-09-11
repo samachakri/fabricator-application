@@ -151,15 +151,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
                 Chakradhar
               </p>
               <p className="text-[10px] text-slate-400 truncate">
-                Admin • 2 Dev Limit
+                Admin
               </p>
             </div>
           </div>
 
-          <span
-            title="Pro Version: 1 credential is limited to 1 person with 2 devices limit"
-            className="text-[9px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded cursor-help"
-          >
+          <span className="text-[9px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
             PRO
           </span>
         </div>
