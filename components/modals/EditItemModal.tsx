@@ -127,10 +127,10 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-5 text-white flex items-center justify-between">
+        <div className="shrink-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-4 sm:py-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400">
               <Edit3 className="w-5 h-5" />
@@ -152,7 +152,7 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
 
         {/* Content */}
         {success ? (
-          <div className="p-10 text-center space-y-3">
+          <div className="flex-1 overflow-y-auto p-8 sm:p-10 text-center space-y-3">
             <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/50">
               <CheckCircle2 className="w-8 h-8" />
             </div>
@@ -162,8 +162,9 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Material Name */}
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
@@ -400,22 +401,23 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 </button>
               </div>
             </div>
+            </div>
 
-            {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Fixed Footer Buttons */}
+            <div className="shrink-0 bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors"
+                className="px-5 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/70 rounded-xl transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
+                className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-200 transition-all flex items-center gap-2"
               >
                 <Edit3 className="w-4 h-4" />
-                Save Changes
+                <span>Save Changes</span>
               </button>
             </div>
           </form>
