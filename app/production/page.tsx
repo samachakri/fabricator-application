@@ -57,7 +57,6 @@ function ProductionDashboardContent() {
   // Search & dropdown filters
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<'ALL' | ProductionStage>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [workerFilter, setWorkerFilter] = useState('ALL');
   const [materialStatusFilter, setMaterialStatusFilter] = useState('ALL');
 
@@ -92,10 +91,6 @@ function ProductionDashboardContent() {
       if (stageFilter !== 'ALL' && order.currentStage !== stageFilter) {
         return false;
       }
-      // Priority filter
-      if (priorityFilter !== 'ALL' && order.priority !== priorityFilter) {
-        return false;
-      }
       // Worker filter
       if (workerFilter !== 'ALL' && order.assignedTo !== workerFilter) {
         return false;
@@ -119,7 +114,7 @@ function ProductionDashboardContent() {
       }
       return true;
     });
-  }, [orders, activeTab, stageFilter, priorityFilter, workerFilter, materialStatusFilter, searchQuery]);
+  }, [orders, activeTab, stageFilter, workerFilter, materialStatusFilter, searchQuery]);
 
   // Stage pill labels
   const tabs: { key: 'ALL' | ProductionStage; label: string; count: number }[] = [
@@ -315,20 +310,6 @@ function ProductionDashboardContent() {
               </select>
             </div>
 
-            {/* Priority Dropdown */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-600">
-              <span className="text-slate-400 font-medium">Priority</span>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-              >
-                <option value="ALL">All</option>
-                <option value="High">High</option>
-                <option value="Normal">Normal</option>
-                <option value="Low">Low</option>
-              </select>
-            </div>
 
             {/* Assigned Worker Dropdown */}
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-600">
@@ -380,7 +361,6 @@ function ProductionDashboardContent() {
                     <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Production Order</th>
                     <th className="py-3 px-4 whitespace-nowrap min-w-[170px]">Project / Customer</th>
                     <th className="py-3 px-4 whitespace-nowrap min-w-[130px]">Windows / Doors</th>
-                    <th className="py-3 px-4 whitespace-nowrap min-w-[90px]">Priority</th>
                     <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Current Stage</th>
                     <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Material Status</th>
                     <th className="py-3 px-4 whitespace-nowrap min-w-[110px]">Assigned To</th>
@@ -425,20 +405,6 @@ function ProductionDashboardContent() {
                           {order.windowsDoorsSummary}
                         </td>
 
-                        {/* Priority */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              order.priority === 'High'
-                                ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                                : order.priority === 'Normal'
-                                ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                                : 'bg-slate-100 text-slate-600 border border-slate-200'
-                            }`}
-                          >
-                            {order.priority}
-                          </span>
-                        </td>
 
                         {/* Current Stage */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
