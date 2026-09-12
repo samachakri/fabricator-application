@@ -377,16 +377,16 @@ function ProductionDashboardContent() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 uppercase text-[10px] font-semibold border-b border-slate-200">
-                    <th className="py-3 px-4">Production Order</th>
-                    <th className="py-3 px-4">Project / Customer</th>
-                    <th className="py-3 px-4">Windows / Doors</th>
-                    <th className="py-3 px-4">Priority</th>
-                    <th className="py-3 px-4">Current Stage</th>
-                    <th className="py-3 px-4">Material Status</th>
-                    <th className="py-3 px-4">Assigned To</th>
-                    <th className="py-3 px-4">Due Date</th>
-                    <th className="py-3 px-4">Last Updated</th>
-                    <th className="py-3 px-4 text-center">Actions</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Production Order</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[170px]">Project / Customer</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[130px]">Windows / Doors</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[90px]">Priority</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Current Stage</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[140px]">Material Status</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[110px]">Assigned To</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[90px]">Due Date</th>
+                    <th className="py-3 px-4 whitespace-nowrap min-w-[120px]">Last Updated</th>
+                    <th className="py-3 px-4 whitespace-nowrap text-center min-w-[70px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -405,7 +405,7 @@ function ProductionDashboardContent() {
                         }`}
                       >
                         {/* Production Order */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className="font-black text-xs text-[#1B64F2] font-mono block">
                             {order.id}
                           </span>
@@ -415,18 +415,18 @@ function ProductionDashboardContent() {
                         </td>
 
                         {/* Project / Customer */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="font-bold text-slate-800">{order.customer}</div>
                           <div className="text-[10px] text-slate-400">{order.project}</div>
                         </td>
 
                         {/* Windows / Doors */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-700">
+                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-700">
                           {order.windowsDoorsSummary}
                         </td>
 
                         {/* Priority */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               order.priority === 'High'
@@ -441,7 +441,7 @@ function ProductionDashboardContent() {
                         </td>
 
                         {/* Current Stage */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
                               order.currentStage === 'READY'
@@ -467,7 +467,7 @@ function ProductionDashboardContent() {
                         </td>
 
                         {/* Material Status */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-medium ${
                               order.materialStatus === 'Ready' ||
@@ -485,22 +485,22 @@ function ProductionDashboardContent() {
                         </td>
 
                         {/* Assigned To */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-slate-800">
                           {order.assignedTo}
                         </td>
 
                         {/* Due Date */}
-                        <td className="py-3.5 px-4 text-slate-600 font-medium">
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-medium">
                           {order.dueDate}
                         </td>
 
                         {/* Last Updated */}
-                        <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-400 font-mono text-[11px]">
                           {order.lastUpdated}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3.5 px-4 whitespace-nowrap text-center">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -524,17 +524,25 @@ function ProductionDashboardContent() {
       </div>
 
       {/* ========================================================= */}
-      {/* RIGHT SIDE DRAWER (Only comes out when an order is clicked) */}
+      {/* RIGHT SIDE DRAWER (Overlay slide-over so left alignment never shifts) */}
       {/* ========================================================= */}
       {selectedOrder && (
-        <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-[420px] lg:w-[480px] shrink-0 h-full border-l border-slate-200 bg-white shadow-2xl md:static md:z-20 md:shadow-none animate-in slide-in-from-right duration-200">
-          <ProductionDetailDrawer
-            order={selectedOrder}
-            onClose={() => setSelectedOrderId(null)}
-            onOpenStageWorkspace={(stage) => setActiveWorkspace(stage)}
-            onResolveShortage={() => resolveShortage(selectedOrder.id, 'All')}
+        <>
+          {/* Subtle click-outside backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px] transition-opacity"
+            onClick={() => setSelectedOrderId(null)}
           />
-        </div>
+
+          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] lg:w-[490px] h-full border-l border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-200 flex flex-col">
+            <ProductionDetailDrawer
+              order={selectedOrder}
+              onClose={() => setSelectedOrderId(null)}
+              onOpenStageWorkspace={(stage) => setActiveWorkspace(stage)}
+              onResolveShortage={() => resolveShortage(selectedOrder.id, 'All')}
+            />
+          </div>
+        </>
       )}
 
       {/* ========================================================= */}
