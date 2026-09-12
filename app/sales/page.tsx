@@ -559,9 +559,6 @@ export default function SalesPage() {
               ↗ +12%
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            From 38 active opportunities
-          </p>
         </div>
 
         {/* Card 2: Active Leads */}
@@ -582,9 +579,6 @@ export default function SalesPage() {
               In Progress
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            6 new inquiries this week
-          </p>
         </div>
 
         {/* Card 3: Pending Quotations */}
@@ -605,9 +599,6 @@ export default function SalesPage() {
               ₹12.4 L value
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Awaiting client signoff
-          </p>
         </div>
 
         {/* Card 4: Win Rate */}
@@ -628,9 +619,6 @@ export default function SalesPage() {
               ↗ +4.2%
             </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Based on last 90 days
-          </p>
         </div>
       </div>
 
