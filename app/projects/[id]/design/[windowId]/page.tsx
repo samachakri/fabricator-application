@@ -27,6 +27,7 @@ export default function WindowDesignerPage() {
     getWindow,
     addWindow,
     updateWindow,
+    deleteWindow,
     generateQuotation,
   } = useStore();
 
@@ -271,6 +272,24 @@ export default function WindowDesignerPage() {
     }
   };
 
+  // Delete window from project
+  const handleDeleteWindow = (targetId: string) => {
+    if (!project) return;
+    if (project.windows.length <= 1) {
+      alert('At least one window is required for this project.');
+      return;
+    }
+    const targetWin = project.windows.find((w) => w.id === targetId);
+    const winLabel = targetWin?.id || targetId;
+    if (confirm(`Are you sure you want to delete window ${winLabel}?`)) {
+      deleteWindow(projectId, targetId);
+      const remaining = project.windows.filter((w) => w.id !== targetId);
+      if (remaining.length > 0) {
+        router.push(`/projects/${projectId}/design/${remaining[0].id}`);
+      }
+    }
+  };
+
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -330,6 +349,7 @@ export default function WindowDesignerPage() {
         activeWindowId={design.id}
         onSelectTab={handleSelectWindow}
         onAddWindow={handleAddWindow}
+        onDeleteTab={handleDeleteWindow}
       />
 
       {/* 3. Main Workspace: LEFT 60% SVG Technical Drawing / RIGHT 40% Contextual Config & Pricing */}
