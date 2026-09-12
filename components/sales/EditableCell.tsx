@@ -59,7 +59,7 @@ export const EditablePriceCell: React.FC<EditablePriceCellProps> = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer group flex items-center justify-between gap-1 py-1 px-1.5 -mx-1.5 rounded hover:bg-slate-100 transition-colors"
+      className="cursor-pointer group flex items-center justify-between gap-1.5 py-1 rounded hover:bg-slate-100/70 transition-colors"
       title="Click to edit price"
     >
       <span className="font-mono font-bold text-slate-900 text-xs">
@@ -160,7 +160,7 @@ export const EditableCustomerCell: React.FC<EditableCustomerCellProps> = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer group flex items-center gap-3 py-1 px-1 -mx-1 rounded hover:bg-slate-100 transition-colors"
+      className="cursor-pointer group flex items-center gap-3 py-1 rounded hover:bg-slate-100/70 transition-colors"
       title="Click to edit customer details"
     >
       <div
@@ -256,7 +256,7 @@ export const EditableProjectCell: React.FC<EditableProjectCellProps> = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer group py-1 px-1.5 -mx-1.5 rounded hover:bg-slate-100 transition-colors"
+      className="cursor-pointer group py-1 rounded hover:bg-slate-100/70 transition-colors"
       title="Click to edit project details"
     >
       <div className="flex items-center justify-between gap-1">
@@ -319,7 +319,7 @@ export const EditableOwnerCell: React.FC<EditableOwnerCellProps> = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer group flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded hover:bg-slate-100 transition-colors"
+      className="cursor-pointer group flex items-center justify-between gap-2 py-1 rounded hover:bg-slate-100/70 transition-colors"
       title="Click to edit owner"
     >
       <div className="flex items-center gap-2 min-w-0">

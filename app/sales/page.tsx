@@ -365,7 +365,7 @@ export default function SalesPage() {
     switch (colId) {
       case 'customer':
         return (
-          <td key={colId} className="px-4 py-3">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle">
             <EditableCustomerCell
               name={p.customer.name}
               phone={p.customer.phone}
@@ -389,7 +389,7 @@ export default function SalesPage() {
 
       case 'project':
         return (
-          <td key={colId} className="px-4 py-3">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle">
             <EditableProjectCell
               projectId={p.id}
               name={p.name}
@@ -411,7 +411,7 @@ export default function SalesPage() {
 
       case 'dealStage':
         return (
-          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
             <DealStageDropdown
               currentStage={p.dealStage}
               onSelectStage={(newStage) =>
@@ -423,7 +423,7 @@ export default function SalesPage() {
 
       case 'dealValue':
         return (
-          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
             <EditablePriceCell
               value={p.estimatedValue}
               onSave={(val) => updateProject(p.id, { estimatedValue: val })}
@@ -433,7 +433,7 @@ export default function SalesPage() {
 
       case 'status':
         return (
-          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
             <ProjectStatusDropdown
               currentStatus={p.status || 'Designing'}
               onSelectStatus={(newStatus) =>
@@ -445,7 +445,7 @@ export default function SalesPage() {
 
       case 'owner':
         return (
-          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+          <td key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
             <EditableOwnerCell
               ownerName={p.dealOwner?.name || 'Chakri S.'}
               avatar={p.dealOwner?.avatar || 'CS'}
@@ -473,7 +473,7 @@ export default function SalesPage() {
         const customCol = customColumns.find((c) => c.id === colId);
         if (customCol) {
           return (
-            <td key={colId} className="px-4 py-3 whitespace-nowrap">
+            <td key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
               <CRMCell
                 column={customCol}
                 value={p.customFields?.[customCol.id]}
@@ -484,7 +484,7 @@ export default function SalesPage() {
             </td>
           );
         }
-        return <td key={colId} className="px-4 py-3"></td>;
+        return <td key={colId} className="px-4 py-3.5 text-left align-middle"></td>;
       }
     }
   };
@@ -761,7 +761,7 @@ export default function SalesPage() {
                   const isDeletable = colId !== 'customer' && colId !== 'project';
 
                   return (
-                    <th key={colId} className="px-4 py-3.5 whitespace-nowrap">
+                    <th key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
                       <EditableHeader
                         columnId={colId}
                         title={title}

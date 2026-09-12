@@ -63,27 +63,9 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
   };
 
   return (
-    <div className="group/header flex items-center justify-between gap-1 py-0.5 select-none">
-      {/* Left Reorder Arrow */}
-      <button
-        type="button"
-        disabled={!canMoveLeft}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveLeft();
-        }}
-        className={`p-0.5 rounded transition-colors ${
-          canMoveLeft
-            ? 'text-slate-400 hover:text-[#0A2E8A] hover:bg-blue-50 cursor-pointer opacity-0 group-hover/header:opacity-100'
-            : 'opacity-0 cursor-default'
-        }`}
-        title="Move column left"
-      >
-        <ChevronLeft className="w-3.5 h-3.5" />
-      </button>
-
-      {/* Main Title / Editable Input */}
-      <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-center">
+    <div className="group/header flex items-center justify-between gap-2 py-0.5 select-none w-full min-w-0">
+      {/* Main Title / Editable Input - Flush Left Aligned */}
+      <div className="flex items-center gap-1.5 min-w-0 justify-start">
         {icon && <span className="shrink-0">{icon}</span>}
         {isEditing ? (
           <div className="flex items-center gap-1">
@@ -107,7 +89,7 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
         ) : (
           <div
             onDoubleClick={() => setIsEditing(true)}
-            className="flex items-center gap-1 cursor-pointer py-0.5 px-1 rounded hover:bg-slate-200/50 transition-colors truncate"
+            className="flex items-center gap-1 cursor-pointer py-0.5 rounded hover:bg-slate-200/50 transition-colors truncate"
             title="Double-click or click pencil to edit heading"
           >
             <span className="truncate font-extrabold uppercase text-[10px] tracking-wider text-slate-700">
@@ -119,7 +101,7 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
                 e.stopPropagation();
                 setIsEditing(true);
               }}
-              className="opacity-0 group-hover/header:opacity-100 p-0.5 text-slate-400 hover:text-[#0A2E8A] transition-opacity"
+              className="opacity-0 group-hover/header:opacity-100 p-0.5 text-slate-400 hover:text-[#0A2E8A] transition-opacity cursor-pointer"
               title="Rename column heading"
             >
               <Edit2 className="w-2.5 h-2.5" />
@@ -128,8 +110,34 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
         )}
       </div>
 
-      {/* Right Reorder Arrow & Optional Custom Delete */}
-      <div className="flex items-center gap-0.5 shrink-0">
+      {/* Header Action Controls (Move Left, Move Right, Delete) - Grouped on the right on hover */}
+      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover/header:opacity-100 transition-opacity">
+        {canMoveLeft && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveLeft();
+            }}
+            className="p-0.5 rounded text-slate-400 hover:text-[#0A2E8A] hover:bg-blue-50 transition-colors cursor-pointer"
+            title="Move column left"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {canMoveRight && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveRight();
+            }}
+            className="p-0.5 rounded text-slate-400 hover:text-[#0A2E8A] hover:bg-blue-50 transition-colors cursor-pointer"
+            title="Move column right"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
         {onDelete && (
           <button
             type="button"
@@ -137,28 +145,12 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
               e.stopPropagation();
               onDelete();
             }}
-            className="opacity-0 group-hover/header:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer"
+            className="p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
             title={`Delete ${title} column`}
           >
             <Trash2 className="w-3 h-3" />
           </button>
         )}
-        <button
-          type="button"
-          disabled={!canMoveRight}
-          onClick={(e) => {
-            e.stopPropagation();
-            onMoveRight();
-          }}
-          className={`p-0.5 rounded transition-colors ${
-            canMoveRight
-              ? 'text-slate-400 hover:text-[#0A2E8A] hover:bg-blue-50 cursor-pointer opacity-0 group-hover/header:opacity-100'
-              : 'opacity-0 cursor-default'
-          }`}
-          title="Move column right"
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
       </div>
     </div>
   );
