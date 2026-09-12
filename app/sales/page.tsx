@@ -33,29 +33,61 @@ import { DealStage, CustomCRMColumn } from '@/lib/types';
 import { DealStageDropdown } from '@/components/sales/DealStageDropdown';
 import { AddColumnModal } from '@/components/sales/AddColumnModal';
 import { CRMCell } from '@/components/sales/CRMCell';
+import { EditableHeader } from '@/components/sales/EditableHeader';
+import {
+  EditableCustomerCell,
+  EditableProjectCell,
+  EditablePriceCell,
+  EditableOwnerCell,
+} from '@/components/sales/EditableCell';
+import { ProjectStatusDropdown } from '@/components/sales/ProjectStatusDropdown';
 
 const STORAGE_KEY_CUSTOM_COLUMNS = 'fabricator_pro_sales_custom_columns_v1';
+const STORAGE_KEY_COLUMN_ORDER = 'fabricator_pro_sales_column_order_v3';
+const STORAGE_KEY_COLUMN_TITLES = 'fabricator_pro_sales_column_titles_v2';
+
+const DEFAULT_SYSTEM_COLUMN_ORDER = [
+  'customer',
+  'project',
+  'dealStage',
+  'dealValue',
+  'status',
+  'owner',
+];
+
+const DEFAULT_COLUMN_TITLES: Record<string, string> = {
+  customer: 'CUSTOMER & LOCATION',
+  project: 'PROJECT & SPECIFICATIONS',
+  dealStage: 'DEAL STAGE',
+  dealValue: 'DEAL VALUE',
+  status: 'STATUS',
+  owner: 'OWNER',
+};
 
 export default function SalesPage() {
   const { projects, updateProject, deleteProject, deleteProjects } = useStore();
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
   const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomCRMColumn[]>([]);
+  const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_SYSTEM_COLUMN_ORDER);
+  const [columnTitles, setColumnTitles] = useState<Record<string, string>>(DEFAULT_COLUMN_TITLES);
   const [activeTab, setActiveTab] = useState<
-    'all' | 'open' | 'quotes' | 'won'
+    'all' | 'open' | 'quotes' | 'pending_payments' | 'won'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  // Load custom columns from localStorage or set defaults
+  // Load column order, titles, and custom columns from localStorage
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_COLUMNS);
-      if (saved) {
-        setCustomColumns(JSON.parse(saved));
+      const savedCols = localStorage.getItem(STORAGE_KEY_CUSTOM_COLUMNS);
+      let loadedCols: CustomCRMColumn[] = [];
+      if (savedCols) {
+        loadedCols = JSON.parse(savedCols);
+        setCustomColumns(loadedCols);
       } else {
-        const initialCols: CustomCRMColumn[] = [
+        loadedCols = [
           {
             id: 'col_payment_status',
             name: 'Payment Status',
@@ -68,13 +100,64 @@ export default function SalesPage() {
             type: 'mail',
           },
         ];
-        setCustomColumns(initialCols);
-        localStorage.setItem(STORAGE_KEY_CUSTOM_COLUMNS, JSON.stringify(initialCols));
+        setCustomColumns(loadedCols);
+        localStorage.setItem(STORAGE_KEY_CUSTOM_COLUMNS, JSON.stringify(loadedCols));
+      }
+
+      const savedTitles = localStorage.getItem(STORAGE_KEY_COLUMN_TITLES);
+      if (savedTitles) {
+        setColumnTitles((prev) => ({ ...prev, ...JSON.parse(savedTitles) }));
+      }
+
+      const savedOrder = localStorage.getItem(STORAGE_KEY_COLUMN_ORDER);
+      if (savedOrder) {
+        const parsed = JSON.parse(savedOrder);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter out legacy 'lastActivity' column
+          const clean = parsed.filter((id) => id !== 'lastActivity');
+          if (!clean.includes('status')) {
+            clean.push('status');
+          }
+          // Ensure any custom columns are present
+          loadedCols.forEach((c) => {
+            if (!clean.includes(c.id)) clean.push(c.id);
+          });
+          setColumnOrder(clean);
+        }
+      } else {
+        const fullDefault = [...DEFAULT_SYSTEM_COLUMN_ORDER, ...loadedCols.map((c) => c.id)];
+        setColumnOrder(fullDefault);
       }
     } catch (e) {
       console.error(e);
     }
   }, []);
+
+  const moveColumn = (colId: string, direction: 'left' | 'right') => {
+    const currentIndex = columnOrder.indexOf(colId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= columnOrder.length) return;
+    const updated = [...columnOrder];
+    const [moved] = updated.splice(currentIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    setColumnOrder(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRenameColumn = (colId: string, newTitle: string) => {
+    const updated = { ...columnTitles, [colId]: newTitle };
+    setColumnTitles(updated);
+    try {
+      localStorage.setItem(STORAGE_KEY_COLUMN_TITLES, JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const saveColumns = (cols: CustomCRMColumn[]) => {
     setCustomColumns(cols);
@@ -88,11 +171,27 @@ export default function SalesPage() {
   const handleAddColumn = (newCol: CustomCRMColumn) => {
     const updated = [...customColumns, newCol];
     saveColumns(updated);
+    if (!columnOrder.includes(newCol.id)) {
+      const newOrder = [...columnOrder, newCol.id];
+      setColumnOrder(newOrder);
+      try {
+        localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(newOrder));
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
   const handleDeleteColumn = (colId: string) => {
     const updated = customColumns.filter((c) => c.id !== colId);
     saveColumns(updated);
+    const newOrder = columnOrder.filter((id) => id !== colId);
+    setColumnOrder(newOrder);
+    try {
+      localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(newOrder));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleAddOptionToColumn = (colId: string, newOption: string) => {
@@ -136,6 +235,22 @@ export default function SalesPage() {
     }
   };
 
+  // Dynamic Pending Payments Count
+  const pendingPaymentsCount = useMemo(() => {
+    return projects.filter((p) => {
+      const stageLower = (p.dealStage || '').toLowerCase();
+      const statusLower = (p.status || '').toLowerCase();
+      const customPay = String(p.customFields?.['col_payment_status'] || '').toLowerCase();
+      return (
+        stageLower.includes('pending') ||
+        statusLower.includes('pending') ||
+        customPay.includes('pending') ||
+        p.dealStage === 'Advance Pending' ||
+        p.status === 'Advance Pending'
+      );
+    }).length;
+  }, [projects]);
+
   // KPI Calculations matching screenshot
   const totalPipelineValue = '₹34.8 L';
   const activeLeadsCount = 24;
@@ -160,6 +275,17 @@ export default function SalesPage() {
         ) {
           return false;
         }
+      } else if (activeTab === 'pending_payments') {
+        const stageLower = (p.dealStage || '').toLowerCase();
+        const statusLower = (p.status || '').toLowerCase();
+        const customPay = String(p.customFields?.['col_payment_status'] || '').toLowerCase();
+        const isPending =
+          stageLower.includes('pending') ||
+          statusLower.includes('pending') ||
+          customPay.includes('pending') ||
+          p.dealStage === 'Advance Pending' ||
+          p.status === 'Advance Pending';
+        if (!isPending) return false;
       } else if (activeTab === 'won') {
         if (
           p.dealStage !== 'Won - In Production' &&
@@ -223,23 +349,152 @@ export default function SalesPage() {
   };
 
 
-  const getActivityIcon = (type?: string) => {
+  const getCustomColIcon = (type?: CustomCRMColumn['type']) => {
     switch (type) {
+      case 'text':
+        return <Type className="w-3 h-3 text-blue-600" />;
+      case 'number':
+        return <Hash className="w-3 h-3 text-emerald-600" />;
       case 'mail':
-        return <Mail className="w-3.5 h-3.5 text-slate-500" />;
-      case 'phone':
-        return <Phone className="w-3.5 h-3.5 text-slate-500" />;
-      case 'calendar':
-        return <Calendar className="w-3.5 h-3.5 text-slate-500" />;
-      case 'cad':
-        return <Compass className="w-3.5 h-3.5 text-blue-600" />;
-      case 'eye':
-        return <Eye className="w-3.5 h-3.5 text-slate-500" />;
-      case 'payment':
-        return <Banknote className="w-3.5 h-3.5 text-emerald-600" />;
-      case 'clock':
+        return <Mail className="w-3 h-3 text-amber-600" />;
+      case 'status':
+        return <Tag className="w-3 h-3 text-purple-600" />;
       default:
-        return <Clock className="w-3.5 h-3.5 text-slate-400" />;
+        return null;
+    }
+  };
+
+  const renderTableCell = (
+    colId: string,
+    p: (typeof projects)[0],
+    idx: number,
+    initials: string,
+    hasDesign: boolean
+  ) => {
+    switch (colId) {
+      case 'customer':
+        return (
+          <td key={colId} className="px-4 py-3">
+            <EditableCustomerCell
+              name={p.customer.name}
+              phone={p.customer.phone}
+              location={p.location || p.customer.address}
+              initials={initials}
+              avatarBg={getAvatarBg(idx)}
+              onSave={({ name, phone, location }) =>
+                updateProject(p.id, {
+                  customer: {
+                    ...p.customer,
+                    name: name ?? p.customer.name,
+                    phone: phone ?? p.customer.phone,
+                    address: location ?? p.customer.address,
+                  },
+                  location: location ?? p.location,
+                })
+              }
+            />
+          </td>
+        );
+
+      case 'project':
+        return (
+          <td key={colId} className="px-4 py-3">
+            <EditableProjectCell
+              projectId={p.id}
+              name={p.name}
+              specs={
+                p.specSummary ||
+                (hasDesign
+                  ? `${p.windows.length} Windows (${p.windows[0]?.profileBrand || 'uPVC'})`
+                  : 'Pending Window Measurements')
+              }
+              onSave={({ name, specSummary }) =>
+                updateProject(p.id, {
+                  name: name ?? p.name,
+                  specSummary: specSummary ?? p.specSummary,
+                })
+              }
+            />
+          </td>
+        );
+
+      case 'dealStage':
+        return (
+          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+            <DealStageDropdown
+              currentStage={p.dealStage}
+              onSelectStage={(newStage) =>
+                updateProject(p.id, { dealStage: newStage })
+              }
+            />
+          </td>
+        );
+
+      case 'dealValue':
+        return (
+          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+            <EditablePriceCell
+              value={p.estimatedValue}
+              onSave={(val) => updateProject(p.id, { estimatedValue: val })}
+            />
+          </td>
+        );
+
+      case 'status':
+        return (
+          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+            <ProjectStatusDropdown
+              currentStatus={p.status || 'Designing'}
+              onSelectStatus={(newStatus) =>
+                updateProject(p.id, { status: newStatus })
+              }
+            />
+          </td>
+        );
+
+      case 'owner':
+        return (
+          <td key={colId} className="px-4 py-3 whitespace-nowrap">
+            <EditableOwnerCell
+              ownerName={p.dealOwner?.name || 'Chakri S.'}
+              avatar={p.dealOwner?.avatar || 'CS'}
+              color={p.dealOwner?.color || 'bg-[#0A2E8A]'}
+              onSave={(newName) =>
+                updateProject(p.id, {
+                  dealOwner: {
+                    ...(p.dealOwner || {}),
+                    name: newName,
+                    avatar: newName
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase(),
+                    color: p.dealOwner?.color || 'bg-[#0A2E8A]',
+                  },
+                })
+              }
+            />
+          </td>
+        );
+
+      default: {
+        const customCol = customColumns.find((c) => c.id === colId);
+        if (customCol) {
+          return (
+            <td key={colId} className="px-4 py-3 whitespace-nowrap">
+              <CRMCell
+                column={customCol}
+                value={p.customFields?.[customCol.id]}
+                onSave={(val) => handleSaveCell(p.id, customCol.id, val)}
+                onAddOptionToColumn={handleAddOptionToColumn}
+                onDeleteOptionFromColumn={handleDeleteOptionFromColumn}
+              />
+            </td>
+          );
+        }
+        return <td key={colId} className="px-4 py-3"></td>;
+      }
     }
   };
 
@@ -431,6 +686,25 @@ export default function SalesPage() {
             Quotations Sent (9)
           </button>
           <button
+            onClick={() => setActiveTab('pending_payments')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+              activeTab === 'pending_payments'
+                ? 'bg-[#0A2E8A] text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <span>Pending Payments</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'pending_payments'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              {pendingPaymentsCount}
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab('won')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
               activeTab === 'won'
@@ -548,36 +822,36 @@ export default function SalesPage() {
                     )}
                   </div>
                 </th>
-                <th className="px-4 py-3.5">CUSTOMER & LOCATION</th>
-                <th className="px-4 py-3.5">PROJECT & SPECIFICATIONS</th>
-                <th className="px-4 py-3.5">DEAL STAGE</th>
-                <th className="px-4 py-3.5">DEAL VALUE</th>
-                <th className="px-4 py-3.5">OWNER</th>
-                <th className="px-4 py-3.5">LAST ACTIVITY</th>
-                {/* Dynamic Custom CRM Columns */}
-                {customColumns.map((col) => (
-                  <th key={col.id} className="px-4 py-3.5 group/th whitespace-nowrap bg-slate-50/50">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {col.type === 'text' && <Type className="w-3 h-3 text-blue-600" />}
-                        {col.type === 'number' && <Hash className="w-3 h-3 text-emerald-600" />}
-                        {col.type === 'mail' && <Mail className="w-3 h-3 text-amber-600" />}
-                        {col.type === 'status' && <Tag className="w-3 h-3 text-purple-600" />}
-                        <span className="text-slate-800 font-extrabold uppercase text-[10px] tracking-wider">
-                          {col.name}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteColumn(col.id)}
-                        className="opacity-0 group-hover/th:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-opacity"
-                        title={`Delete ${col.name} column`}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </th>
-                ))}
+
+                {/* Dynamic Reorderable & Editable Column Headers */}
+                {columnOrder.map((colId, index) => {
+                  const customCol = customColumns.find((c) => c.id === colId);
+                  const title =
+                    columnTitles[colId] ||
+                    customCol?.name ||
+                    DEFAULT_COLUMN_TITLES[colId] ||
+                    colId;
+                  const isCustom = !!customCol;
+                  const icon = customCol ? getCustomColIcon(customCol.type) : undefined;
+
+                  return (
+                    <th key={colId} className="px-4 py-3.5 whitespace-nowrap">
+                      <EditableHeader
+                        columnId={colId}
+                        title={title}
+                        icon={icon}
+                        isCustom={isCustom}
+                        canMoveLeft={index > 0}
+                        canMoveRight={index < columnOrder.length - 1}
+                        onMoveLeft={() => moveColumn(colId, 'left')}
+                        onMoveRight={() => moveColumn(colId, 'right')}
+                        onRename={(newTitle) => handleRenameColumn(colId, newTitle)}
+                        onDelete={isCustom ? () => handleDeleteColumn(colId) : undefined}
+                      />
+                    </th>
+                  );
+                })}
+
                 {/* + Add Column Button in Header */}
                 <th className="px-3 py-3.5 w-28 whitespace-nowrap">
                   <button
@@ -590,7 +864,7 @@ export default function SalesPage() {
                     <span>Add Column</span>
                   </button>
                 </th>
-                <th className="px-4 py-3.5 text-right">ACTIONS</th>
+                <th className="px-4 py-3.5 text-right whitespace-nowrap">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -625,98 +899,10 @@ export default function SalesPage() {
                       />
                     </td>
 
-                    {/* Customer & Location */}
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getAvatarBg(
-                            idx
-                          )}`}
-                        >
-                          {initials}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900 text-xs">
-                            {p.customer.name}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {p.customer.phone}{' '}
-                            <span className="text-slate-300">•</span>{' '}
-                            {p.location || p.customer.address}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Project & Specifications */}
-                    <td className="px-4 py-4">
-                      <Link
-                        href={`/projects/${p.id}/design/W01`}
-                        className="font-bold text-slate-900 hover:text-[#0A2E8A] transition-colors"
-                      >
-                        {p.name}
-                      </Link>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        {p.specSummary ||
-                          (hasDesign
-                            ? `${p.windows.length} Windows (${p.windows[0]?.profileBrand || 'uPVC'})`
-                            : 'Pending Window Measurements')}
-                      </div>
-                    </td>
-
-                    {/* Deal Stage Pill with interactive dropdown */}
-                    <td className="px-4 py-4">
-                      <DealStageDropdown
-                        currentStage={p.dealStage}
-                        onSelectStage={(newStage) =>
-                          updateProject(p.id, { dealStage: newStage })
-                        }
-                      />
-                    </td>
-
-                    {/* Deal Value */}
-                    <td className="px-4 py-4 font-mono font-bold text-slate-900 text-xs">
-                      ₹{p.estimatedValue.toLocaleString()}
-                    </td>
-
-                    {/* Owner */}
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center ${
-                            p.dealOwner?.color || 'bg-[#0A2E8A]'
-                          }`}
-                        >
-                          {p.dealOwner?.avatar || 'CS'}
-                        </div>
-                        <span className="text-xs text-slate-700">
-                          {p.dealOwner?.name || 'Chakri S.'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Last Activity with icon */}
-                    <td className="px-4 py-4 text-xs text-slate-600">
-                      <div className="flex items-center gap-1.5">
-                        {getActivityIcon(p.lastActivity?.type)}
-                        <span>
-                          {p.lastActivity?.text || 'Inquired recently'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Dynamic Custom CRM Cells */}
-                    {customColumns.map((col) => (
-                      <td key={col.id} className="px-4 py-4 whitespace-nowrap">
-                        <CRMCell
-                          column={col}
-                          value={p.customFields?.[col.id]}
-                          onSave={(val) => handleSaveCell(p.id, col.id, val)}
-                          onAddOptionToColumn={handleAddOptionToColumn}
-                          onDeleteOptionFromColumn={handleDeleteOptionFromColumn}
-                        />
-                      </td>
-                    ))}
+                    {/* Dynamically ordered Excel-like editable table cells */}
+                    {columnOrder.map((colId) =>
+                      renderTableCell(colId, p, idx, initials, hasDesign)
+                    )}
 
                     {/* Spacer cell aligning with + Add Column header */}
                     <td className="px-3 py-4 w-28"></td>

@@ -282,7 +282,15 @@ export interface Project {
   siteAddress: string;
   projectType: 'Residential' | 'Commercial' | 'Villa' | 'Builder / Apartment';
   currentStage: ProjectStage;
-  status: 'Designing' | 'Quotation Sent' | 'Advance Received' | 'In Production' | 'Completed';
+  status:
+    | 'Designing'
+    | 'Quotation Sent'
+    | 'Advance Pending'
+    | 'Advance Received'
+    | 'In Production'
+    | 'Completed'
+    | 'On Hold'
+    | (string & {});
   dealStage?: DealStage;
   dealOwner?: { name: string; avatar: string; color?: string };
   lastActivity?: {
