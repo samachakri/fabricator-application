@@ -8,11 +8,8 @@ import {
   ArrowRight,
   Users,
   Plus,
-  SlidersHorizontal,
   Download,
   Search,
-  LayoutGrid,
-  List,
   Mail,
   Phone,
   Calendar,
@@ -75,7 +72,6 @@ export default function SalesPage() {
     'all' | 'quotes' | 'pending_payments' | 'won'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [currentPage, setCurrentPage] = useState(1);
 
   // Load column order, titles, and custom columns from localStorage
@@ -511,13 +507,6 @@ export default function SalesPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Filters button with blue dot */}
-          <button className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm flex items-center gap-1.5 transition-colors">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
-            <span>Filters</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 ml-0.5" />
-          </button>
-
           {/* Export button */}
           <button className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm flex items-center gap-1.5 transition-colors">
             <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -712,31 +701,6 @@ export default function SalesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0A2E8A]/20 focus:border-[#0A2E8A]"
             />
-          </div>
-
-          <div className="flex items-center rounded-lg border border-slate-200 bg-white p-0.5">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md ${
-                viewMode === 'table'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-              title="Table View"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md ${
-                viewMode === 'cards'
-                  ? 'bg-slate-100 text-slate-800'
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       </div>
