@@ -23,19 +23,94 @@ import {
   ChevronRight,
   ShieldCheck,
   FileText,
+  Type,
+  Hash,
+  Tag,
+  Trash2,
 } from 'lucide-react';
 import { NewProjectModal } from '@/components/modals/NewProjectModal';
-import { DealStage } from '@/lib/types';
+import { DealStage, CustomCRMColumn } from '@/lib/types';
+import { DealStageDropdown } from '@/components/sales/DealStageDropdown';
+import { AddColumnModal } from '@/components/sales/AddColumnModal';
+import { CRMCell } from '@/components/sales/CRMCell';
+
+const STORAGE_KEY_CUSTOM_COLUMNS = 'fabricator_pro_sales_custom_columns_v1';
 
 export default function SalesPage() {
-  const { projects } = useStore();
+  const { projects, updateProject } = useStore();
   const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
+  const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomCRMColumn[]>([]);
   const [activeTab, setActiveTab] = useState<
     'all' | 'open' | 'quotes' | 'won'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+
+  // Load custom columns from localStorage or set defaults
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_COLUMNS);
+      if (saved) {
+        setCustomColumns(JSON.parse(saved));
+      } else {
+        const initialCols: CustomCRMColumn[] = [
+          {
+            id: 'col_payment_status',
+            name: 'Payment Status',
+            type: 'status',
+            options: ['Advance Pending', '50% Received', '100% Cleared'],
+          },
+          {
+            id: 'col_client_email',
+            name: 'Client Email',
+            type: 'mail',
+          },
+        ];
+        setCustomColumns(initialCols);
+        localStorage.setItem(STORAGE_KEY_CUSTOM_COLUMNS, JSON.stringify(initialCols));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const saveColumns = (cols: CustomCRMColumn[]) => {
+    setCustomColumns(cols);
+    try {
+      localStorage.setItem(STORAGE_KEY_CUSTOM_COLUMNS, JSON.stringify(cols));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAddColumn = (newCol: CustomCRMColumn) => {
+    const updated = [...customColumns, newCol];
+    saveColumns(updated);
+  };
+
+  const handleDeleteColumn = (colId: string) => {
+    const updated = customColumns.filter((c) => c.id !== colId);
+    saveColumns(updated);
+  };
+
+  const handleAddOptionToColumn = (colId: string, newOption: string) => {
+    const updated = customColumns.map((c) => {
+      if (c.id !== colId) return c;
+      const opts = c.options || [];
+      if (opts.includes(newOption)) return c;
+      return { ...c, options: [...opts, newOption] };
+    });
+    saveColumns(updated);
+  };
+
+  const handleSaveCell = (projectId: string, colId: string, val: any) => {
+    const proj = projects.find((p) => p.id === projectId);
+    if (!proj) return;
+    const customFields = { ...(proj.customFields || {}), [colId]: val };
+    updateProject(projectId, { customFields });
+  };
 
   // KPI Calculations matching screenshot
   const totalPipelineValue = '₹34.8 L';
@@ -123,47 +198,6 @@ export default function SalesPage() {
     return colors[index % colors.length];
   };
 
-  const getStageBadge = (stage?: DealStage) => {
-    switch (stage) {
-      case 'Quotation Sent':
-        return {
-          bg: 'bg-blue-50 text-blue-700 border-blue-200/60',
-          dot: 'bg-blue-600',
-          label: 'Quotation Sent',
-        };
-      case 'Advance Pending':
-        return {
-          bg: 'bg-orange-50 text-orange-800 border-orange-200/60',
-          dot: 'bg-orange-500',
-          label: 'Advance Pending',
-        };
-      case 'Site Survey':
-        return {
-          bg: 'bg-purple-50 text-purple-700 border-purple-200/60',
-          dot: 'bg-purple-600',
-          label: 'Site Survey',
-        };
-      case 'Design & CAD':
-        return {
-          bg: 'bg-indigo-50 text-indigo-700 border-indigo-200/60',
-          dot: 'bg-indigo-600',
-          label: 'Design & CAD',
-        };
-      case 'Won - In Production':
-        return {
-          bg: 'bg-blue-50 text-blue-800 border-blue-200/60',
-          dot: 'bg-blue-700',
-          label: 'Won - In Production',
-        };
-      case 'New Inquiry':
-      default:
-        return {
-          bg: 'bg-slate-100 text-slate-700 border-slate-200',
-          dot: 'bg-slate-400',
-          label: 'New Inquiry',
-        };
-    }
-  };
 
   const getActivityIcon = (type?: string) => {
     switch (type) {
@@ -234,6 +268,13 @@ export default function SalesPage() {
       <NewProjectModal
         isOpen={isNewLeadOpen}
         onClose={() => setIsNewLeadOpen(false)}
+      />
+
+      {/* Modal for adding new CRM column */}
+      <AddColumnModal
+        isOpen={isAddColumnOpen}
+        onClose={() => setIsAddColumnOpen(false)}
+        onAddColumn={handleAddColumn}
       />
 
       {/* 3. Top 4 Metric KPI Cards matching Screenshot */}
@@ -440,12 +481,47 @@ export default function SalesPage() {
                 <th className="px-4 py-3.5">DEAL VALUE</th>
                 <th className="px-4 py-3.5">OWNER</th>
                 <th className="px-4 py-3.5">LAST ACTIVITY</th>
+                {/* Dynamic Custom CRM Columns */}
+                {customColumns.map((col) => (
+                  <th key={col.id} className="px-4 py-3.5 group/th whitespace-nowrap bg-slate-50/50">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {col.type === 'text' && <Type className="w-3 h-3 text-blue-600" />}
+                        {col.type === 'number' && <Hash className="w-3 h-3 text-emerald-600" />}
+                        {col.type === 'mail' && <Mail className="w-3 h-3 text-amber-600" />}
+                        {col.type === 'status' && <Tag className="w-3 h-3 text-purple-600" />}
+                        <span className="text-slate-800 font-extrabold uppercase text-[10px] tracking-wider">
+                          {col.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteColumn(col.id)}
+                        className="opacity-0 group-hover/th:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-opacity"
+                        title={`Delete ${col.name} column`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </th>
+                ))}
+                {/* + Add Column Button in Header */}
+                <th className="px-3 py-3.5 w-28 whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddColumnOpen(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-[#0A2E8A] hover:text-[#08256E] bg-blue-50/80 hover:bg-blue-100 rounded-lg border border-blue-200/60 transition-colors shadow-2xs cursor-pointer"
+                    title="Add new CRM column"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Column</span>
+                  </button>
+                </th>
                 <th className="px-4 py-3.5 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredProjects.map((p, idx) => {
-                const stage = getStageBadge(p.dealStage);
                 const isChecked = selectedIds.includes(p.id);
 
                 // Derive initials
@@ -515,16 +591,14 @@ export default function SalesPage() {
                       </div>
                     </td>
 
-                    {/* Deal Stage Pill with colored dot */}
+                    {/* Deal Stage Pill with interactive dropdown */}
                     <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${stage.bg}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${stage.dot}`}
-                        />
-                        <span>{stage.label}</span>
-                      </span>
+                      <DealStageDropdown
+                        currentStage={p.dealStage}
+                        onSelectStage={(newStage) =>
+                          updateProject(p.id, { dealStage: newStage })
+                        }
+                      />
                     </td>
 
                     {/* Deal Value */}
@@ -557,6 +631,21 @@ export default function SalesPage() {
                         </span>
                       </div>
                     </td>
+
+                    {/* Dynamic Custom CRM Cells */}
+                    {customColumns.map((col) => (
+                      <td key={col.id} className="px-4 py-4 whitespace-nowrap">
+                        <CRMCell
+                          column={col}
+                          value={p.customFields?.[col.id]}
+                          onSave={(val) => handleSaveCell(p.id, col.id, val)}
+                          onAddOptionToColumn={handleAddOptionToColumn}
+                        />
+                      </td>
+                    ))}
+
+                    {/* Spacer cell aligning with + Add Column header */}
+                    <td className="px-3 py-4 w-28"></td>
 
                     {/* Actions Column: If no design -> Send Quotation (Design First), else View Quote */}
                     <td className="px-4 py-4 text-right">

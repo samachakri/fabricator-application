@@ -261,7 +261,18 @@ export type DealStage =
   | 'Design & CAD'
   | 'Quotation Sent'
   | 'Advance Pending'
-  | 'Won - In Production';
+  | 'Advance Received'
+  | 'Payment Completed'
+  | 'Deal Closed'
+  | 'Won - In Production'
+  | (string & {});
+
+export interface CustomCRMColumn {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'mail' | 'status';
+  options?: string[]; // for status type
+}
 
 export interface Project {
   id: string; // e.g. "PRJ-1042"
@@ -288,6 +299,7 @@ export interface Project {
   productionOrder: ProductionOrder | null;
   designLocked: boolean;
   nextAction: string;
+  customFields?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }

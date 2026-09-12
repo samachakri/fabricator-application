@@ -32,6 +32,7 @@ interface StoreContextType {
     withInitialWindow?: boolean;
     location?: string;
   }) => Project;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
   addWindow: (
     projectId: string,
     windowData: Partial<WindowDesign>
@@ -257,6 +258,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     setProjects((prev) => [newProject, ...prev]);
     return newProject;
+  };
+
+  const updateProject = (projectId: string, updates: Partial<Project>) => {
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== projectId) return p;
+        return {
+          ...p,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   };
 
   const addWindow = (
@@ -907,6 +921,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         getWindow,
         createCustomer,
         createProject,
+        updateProject,
         addWindow,
         updateWindow,
         duplicateWindow,
