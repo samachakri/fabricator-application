@@ -65,8 +65,8 @@ function ProductionDashboardContent() {
   const [activeWorkspace, setActiveWorkspace] = useState<ProductionStage | null>(null);
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
 
-  // Currently selected order for drawer and workspaces
-  const selectedOrder = getOrder(selectedOrderId || '') || orders[0];
+  // Currently selected order for drawer and workspaces (null until user clicks an order)
+  const selectedOrder = selectedOrderId ? getOrder(selectedOrderId) || null : null;
 
   // Stage counts for tabs and KPI cards
   const counts = useMemo(() => {
@@ -395,7 +395,9 @@ function ProductionDashboardContent() {
                     return (
                       <tr
                         key={order.id}
-                        onClick={() => setSelectedOrderId(order.id)}
+                        onClick={() =>
+                          setSelectedOrderId(selectedOrderId === order.id ? null : order.id)
+                        }
                         className={`transition-colors cursor-pointer ${
                           isSelected
                             ? 'bg-blue-50/70 border-l-4 border-l-[#1B64F2]'
@@ -522,10 +524,10 @@ function ProductionDashboardContent() {
       </div>
 
       {/* ========================================================= */}
-      {/* RIGHT SIDE DRAWER (Matches Screenshot 100%)               */}
+      {/* RIGHT SIDE DRAWER (Only comes out when an order is clicked) */}
       {/* ========================================================= */}
       {selectedOrder && (
-        <div className="w-full sm:w-[420px] lg:w-[480px] shrink-0 h-full border-l border-slate-200 bg-white z-20 overflow-hidden hidden md:block">
+        <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-[420px] lg:w-[480px] shrink-0 h-full border-l border-slate-200 bg-white shadow-2xl md:static md:z-20 md:shadow-none animate-in slide-in-from-right duration-200">
           <ProductionDetailDrawer
             order={selectedOrder}
             onClose={() => setSelectedOrderId(null)}

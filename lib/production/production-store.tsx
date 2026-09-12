@@ -858,7 +858,7 @@ const STORAGE_KEY = 'fabricator_pro_production_orders_v2';
 
 export const ProductionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<ManufacturingOrder[]>(INITIAL_ORDERS);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>('PO-1045');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Load from localStorage on mount
   useEffect(() => {
