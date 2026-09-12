@@ -75,7 +75,6 @@ export default function SalesPage() {
     'all' | 'open' | 'quotes' | 'pending_payments' | 'won'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Load column order, titles, and custom columns from localStorage
@@ -220,18 +219,9 @@ export default function SalesPage() {
     saveColumns(updated);
   };
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected lead(s)?`)) {
-      deleteProjects(selectedIds);
-      setSelectedIds([]);
-    }
-  };
-
   const handleDeleteSingleProject = (projectId: string, projectName: string) => {
     if (window.confirm(`Are you sure you want to delete lead "${projectName}"?`)) {
       deleteProject(projectId);
-      setSelectedIds((prev) => prev.filter((id) => id !== projectId));
     }
   };
 
@@ -319,21 +309,7 @@ export default function SalesPage() {
     });
   }, [projects, activeTab, searchQuery]);
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filteredProjects.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredProjects.map((p) => p.id));
-    }
-  };
 
-  const toggleSelect = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
-  };
 
   const getAvatarBg = (index: number) => {
     const colors = [
@@ -756,42 +732,7 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* Bulk Delete Bar when checkboxes are checked */}
-      {selectedIds.length > 0 && (
-        <div className="bg-slate-900 text-white px-5 py-3 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-3">
-            <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-              ✓
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="font-extrabold text-sm tracking-tight">
-                {selectedIds.length} {selectedIds.length === 1 ? 'Lead' : 'Leads'} Selected
-              </span>
-              <span className="text-xs text-slate-400 hidden md:inline">
-                Perform batch actions across checked rows
-              </span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedIds([])}
-              className="px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl transition-colors font-medium cursor-pointer"
-            >
-              Cancel Selection
-            </button>
-            <button
-              type="button"
-              onClick={handleDeleteSelected}
-              className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl flex items-center gap-2 shadow-sm transition-all hover:shadow cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Selected ({selectedIds.length})</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 5. Main Leads Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -799,30 +740,6 @@ export default function SalesPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/90 text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3.5 w-12">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedIds.length === filteredProjects.length &&
-                        filteredProjects.length > 0
-                      }
-                      onChange={toggleSelectAll}
-                      className="rounded border-slate-300 text-[#0A2E8A] focus:ring-0 cursor-pointer"
-                    />
-                    {selectedIds.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteSelected}
-                        className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                        title={`Delete ${selectedIds.length} selected lead(s)`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </th>
-
                 {/* Dynamic Reorderable & Editable Column Headers */}
                 {columnOrder.map((colId, index) => {
                   const customCol = customColumns.find((c) => c.id === colId);
@@ -869,8 +786,6 @@ export default function SalesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredProjects.map((p, idx) => {
-                const isChecked = selectedIds.includes(p.id);
-
                 // Derive initials
                 const initials = p.customer.name
                   .split(' ')
@@ -885,20 +800,8 @@ export default function SalesPage() {
                 return (
                   <tr
                     key={p.id}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      isChecked ? 'bg-blue-50/30' : ''
-                    }`}
+                    className="hover:bg-slate-50/80 transition-colors"
                   >
-                    {/* Checkbox */}
-                    <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleSelect(p.id)}
-                        className="rounded border-slate-300 text-[#0A2E8A] focus:ring-0"
-                      />
-                    </td>
-
                     {/* Dynamically ordered Excel-like editable table cells */}
                     {columnOrder.map((colId) =>
                       renderTableCell(colId, p, idx, initials, hasDesign)
