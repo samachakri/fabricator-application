@@ -61,8 +61,8 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     profileSystem: 'Schüco',
     assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: true,
-    actionType: 'continue',
-    iconType: 'play',
+    actionType: 'start',
+    iconType: 'compass',
   },
   {
     id: 'ORD-1086',
@@ -139,8 +139,8 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     profileSystem: 'Kommerling',
     assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
-    actionType: 'continue',
-    iconType: 'play',
+    actionType: 'start',
+    iconType: 'compass',
   },
   {
     id: 'ORD-1092',
@@ -191,8 +191,8 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     profileSystem: 'Prominance',
     assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
-    actionType: 'continue',
-    iconType: 'play',
+    actionType: 'start',
+    iconType: 'compass',
   },
   {
     id: 'ORD-1096',
@@ -243,8 +243,8 @@ const INITIAL_QUEUE_DATA: DesignQueueItem[] = [
     profileSystem: 'Prominance',
     assignedDrafter: LOGGED_IN_DRAFTER,
     isHighPriority: false,
-    actionType: 'continue',
-    iconType: 'play',
+    actionType: 'start',
+    iconType: 'compass',
   },
   {
     id: 'ORD-1100',
@@ -297,6 +297,20 @@ export default function DesignStudioPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
+  // Track designs that the user came out of in the middle of designing
+  const [inProgressOrders, setInProgressOrders] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fabricator_pro_in_progress_designs');
+      if (saved) {
+        setInProgressOrders(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   // Metric counts
   const designedWindowsCount = useMemo(() => {
     return projects.reduce((acc, p) => acc + (p.windows?.length || 0), 0);
@@ -340,7 +354,18 @@ export default function DesignStudioPage() {
 
   // Launch Window Designer
   const handleLaunchDesigner = (item: DesignQueueItem) => {
-    router.push(`/projects/${item.projectId}/design/W01`);
+    // When the user launches designer, record that this design is in progress
+    // so if they come out in the middle of design, it displays "Continue Design"
+    if (!inProgressOrders.includes(item.id)) {
+      const updated = [...inProgressOrders, item.id];
+      setInProgressOrders(updated);
+      try {
+        localStorage.setItem('fabricator_pro_in_progress_designs', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    router.push(`/projects/${item.projectId}/design/W01?orderId=${item.id}`);
   };
 
   return (
@@ -584,21 +609,26 @@ export default function DesignStudioPage() {
                       </div>
                     </td>
 
-                    {/* Action Button */}
+                    {/* Action Button: shows Continue Design only when user came out in the middle of design */}
                     <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => handleLaunchDesigner(item)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0A2540] hover:bg-[#06182B] active:bg-[#04101D] shadow-2xs transition-all hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        {item.iconType === 'play' ? (
-                          <Play className="w-3 h-3 fill-current" />
-                        ) : (
-                          <Compass className="w-3.5 h-3.5" />
-                        )}
-                        <span>
-                          {item.actionType === 'continue' ? 'Continue Design' : 'Start Design'}
-                        </span>
-                      </button>
+                      {(() => {
+                        const isContinue = inProgressOrders.includes(item.id);
+                        return (
+                          <button
+                            onClick={() => handleLaunchDesigner(item)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0A2540] hover:bg-[#06182B] active:bg-[#04101D] shadow-2xs transition-all hover:scale-[1.02] active:scale-[0.98]"
+                          >
+                            {isContinue ? (
+                              <Play className="w-3 h-3 fill-current" />
+                            ) : (
+                              <Compass className="w-3.5 h-3.5" />
+                            )}
+                            <span>
+                              {isContinue ? 'Continue Design' : 'Start Design'}
+                            </span>
+                          </button>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))

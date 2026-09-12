@@ -91,6 +91,20 @@ export default function WindowDesignerPage() {
     if (!project.quotation) {
       generateQuotation(projectId);
     }
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('orderId');
+      if (orderId) {
+        const saved = localStorage.getItem('fabricator_pro_in_progress_designs');
+        if (saved) {
+          const inProg: string[] = JSON.parse(saved);
+          const filtered = inProg.filter((id) => id !== orderId);
+          localStorage.setItem('fabricator_pro_in_progress_designs', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
     router.push(`/projects/${projectId}/quotation`);
   };
 
