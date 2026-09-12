@@ -1,26 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { useBranding } from '@/lib/branding-store';
-import { WindowCanvas } from '@/components/designer/WindowCanvas';
-import { WindowControls } from '@/components/designer/WindowControls';
-import { RoomVisualizer } from '@/components/designer/RoomVisualizer';
+import { ParametricWindowDesign, WindowComponentType } from '@/lib/design/types';
 import {
-  ArrowLeft,
-  Save,
-  Eye,
-  Layers,
-  Copy,
-  Trash2,
-  Sparkles,
-  CheckCircle2,
-  ArrowRight,
-  FileText,
-  Plus,
-} from 'lucide-react';
+  convertToParametricDesign,
+  convertToStoreWindowDesign,
+  createDefaultWindowDesign,
+} from '@/lib/design/default-design';
+import { DesignHeader } from '@/components/design/DesignHeader';
+import { DesignWindowTabs } from '@/components/design/DesignWindowTabs';
+import { ParametricDesignCanvas } from '@/components/design/ParametricDesignCanvas';
+import { ContextualConfigPanel } from '@/components/design/ContextualConfigPanel';
+import { AddComponentAction } from '@/components/design/AddComponentMenu';
 
 export default function WindowDesignerPage() {
   const params = useParams();
@@ -33,64 +27,121 @@ export default function WindowDesignerPage() {
     getWindow,
     addWindow,
     updateWindow,
-    duplicateWindow,
-    deleteWindow,
     generateQuotation,
   } = useStore();
-  const { branding } = useBranding();
 
   const project = getProject(projectId);
-  const windowDesign = getWindow(projectId, windowId);
+  const rawWindow = getWindow(projectId, windowId);
 
-  const [activeTab, setActiveTab] = useState<'blueprint' | 'realistic' | 'room'>(
-    'blueprint'
-  );
+  // Active parametric design state
+  const [design, setDesign] = useState<ParametricWindowDesign | null>(null);
 
-  React.useEffect(() => {
-    if (project && !windowDesign) {
+  // Undo / Redo history stack
+  const [history, setHistory] = useState<ParametricWindowDesign[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  // Selected component in canvas / inspector
+  const [selectedComponent, setSelectedComponent] = useState<{
+    type: WindowComponentType;
+    id: string;
+    subId?: string;
+  } | null>({
+    type: 'glass',
+    id: 'glass-02',
+  });
+
+  // Save status indicator
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize or update parametric design when project or window changes
+  useEffect(() => {
+    if (project && !rawWindow) {
       const created = addWindow(projectId, {
-        name: 'Window 01 (2 Track Sliding)',
-        type: 'sliding_2track',
-        width: 1500,
+        name: 'Window 01 (Living Room)',
+        type: 'sliding_3track',
+        width: 1800,
         height: 1200,
       });
       if (created && created.id !== windowId) {
         router.replace(`/projects/${projectId}/design/${created.id}`);
       }
+      return;
     }
-  }, [project, windowDesign, projectId, windowId, addWindow, router]);
 
-  if (!project) {
-    return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-bold text-slate-800">Project Not Found</h2>
-        <Link
-          href="/sales"
-          className="mt-4 inline-block px-4 py-2 bg-[#0A2E8A] text-white rounded-lg text-sm font-semibold"
-        >
-          Return to Sales & Leads
-        </Link>
-      </div>
-    );
-  }
+    if (rawWindow) {
+      const parsed = convertToParametricDesign(rawWindow, projectId);
+      // Ensure window id matches route
+      parsed.id = rawWindow.id;
+      parsed.name = rawWindow.name?.replace(/Window \w+ \((.*)\)/, '$1') || 'Living Room';
+      setDesign(parsed);
+      setHistory([parsed]);
+      setHistoryIndex(0);
+      setIsSaved(true);
+    }
+  }, [projectId, windowId, rawWindow?.id]);
 
-  if (!windowDesign) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-12 h-12 border-4 border-[#0A2E8A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm font-semibold text-slate-600">Initializing 2D CAD Canvas & Dimensions...</p>
-      </div>
-    );
-  }
+  // Update design with undo/redo history tracking
+  const handleUpdateDesign = useCallback(
+    (newDesign: ParametricWindowDesign, addToHistory = true) => {
+      setDesign(newDesign);
+      setIsSaved(false);
 
-  const handleUpdate = (updates: any) => {
-    updateWindow(projectId, windowId, updates);
-  };
+      if (addToHistory) {
+        setHistory((prev) => {
+          const upToCurrent = prev.slice(0, historyIndex + 1);
+          return [...upToCurrent, newDesign];
+        });
+        setHistoryIndex((prev) => prev + 1);
+      }
+    },
+    [historyIndex]
+  );
 
-  const handleNextQuotation = () => {
-    if (!project.quotation) {
+  // Undo
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const nextIndex = historyIndex - 1;
+      setHistoryIndex(nextIndex);
+      setDesign(history[nextIndex]);
+      setIsSaved(false);
+    }
+  }, [historyIndex, history]);
+
+  // Redo
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      setDesign(history[nextIndex]);
+      setIsSaved(false);
+    }
+  }, [historyIndex, history]);
+
+  // Save design to persistent store
+  const handleSaveDesign = useCallback(() => {
+    if (!design) return;
+    setIsSaving(true);
+    const storePayload = convertToStoreWindowDesign(design);
+    updateWindow(projectId, windowId, storePayload);
+
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      setIsSaving(false);
+      setIsSaved(true);
+    }, 400);
+  }, [design, projectId, windowId, updateWindow]);
+
+  // Save & Continue to Quotation
+  const handleContinueToQuotation = useCallback(() => {
+    if (!design) return;
+    handleSaveDesign();
+
+    if (!project?.quotation) {
       generateQuotation(projectId);
     }
+
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const orderId = urlParams.get('orderId');
@@ -105,255 +156,220 @@ export default function WindowDesignerPage() {
     } catch (e) {
       console.error(e);
     }
+
     router.push(`/projects/${projectId}/quotation`);
-  };
+  }, [design, handleSaveDesign, project, projectId, generateQuotation, router]);
 
-  const handleDuplicate = () => {
-    const dup = duplicateWindow(projectId, windowId);
-    if (dup) {
-      router.push(`/projects/${projectId}/design/${dup.id}`);
-    }
-  };
+  // Handle "+ Add Component" menu actions
+  const handleAddComponentAction = useCallback(
+    (action: AddComponentAction) => {
+      if (!design) return;
+      const updated = { ...design };
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete window ${windowDesign.id}?`)) {
-      deleteWindow(projectId, windowId);
-      const remaining = project.windows.filter((w) => w.id !== windowId);
-      if (remaining.length > 0) {
-        router.push(`/projects/${projectId}/design/${remaining[0].id}`);
-      } else {
-        router.push('/design');
+      if (action === 'add_vertical_division' || action === 'add_mullion') {
+        // Split panels further or add a mullion
+        const count = updated.panels.length + 1;
+        const newPanels = [];
+        const newMullions = [];
+        for (let i = 0; i < count; i++) {
+          newPanels.push({
+            id: `panel-0${i + 1}`,
+            name: `Panel 0${i + 1}`,
+            panelType: i === 0 ? ('fixed' as const) : ('sliding' as const),
+            openingDirection:
+              i === 0
+                ? ('fixed' as const)
+                : i % 2 === 1
+                ? ('sliding_right' as const)
+                : ('sliding_left' as const),
+            xRatio: i / count,
+            widthRatio: 1 / count,
+            sashId: i === 0 ? undefined : `sash-0${i + 1}`,
+            glassId: `glass-0${i + 1}`,
+          });
+          if (i > 0) {
+            newMullions.push({
+              id: `mullion-0${i}`,
+              positionRatio: i / count,
+              width: 60,
+            });
+          }
+        }
+        updated.panels = newPanels;
+        updated.mullions = newMullions;
+        handleUpdateDesign(updated);
+      } else if (action === 'add_horizontal_division' || action === 'add_transom') {
+        if (updated.transoms.length === 0) {
+          updated.transoms = [{ id: 'transom-01', positionRatio: 0.35, height: 60 }];
+          handleUpdateDesign(updated);
+        }
+      } else if (action === 'add_sash' || action === 'add_sliding_panel') {
+        // Change fixed panels to sliding
+        const modifiedPanels = updated.panels.map((p) => {
+          if (p.panelType === 'fixed') {
+            return {
+              ...p,
+              panelType: 'sliding' as const,
+              openingDirection: 'sliding_right' as const,
+              sashId: `sash-${p.id}`,
+            };
+          }
+          return p;
+        });
+        updated.panels = modifiedPanels;
+        handleUpdateDesign(updated);
+      } else if (action === 'add_fixed_panel') {
+        const modifiedPanels = updated.panels.map((p, idx) => {
+          if (idx === 0) {
+            return {
+              ...p,
+              panelType: 'fixed' as const,
+              openingDirection: 'fixed' as const,
+              sashId: undefined,
+            };
+          }
+          return p;
+        });
+        updated.panels = modifiedPanels;
+        handleUpdateDesign(updated);
+      } else if (action === 'add_mesh') {
+        updated.defaultMesh = {
+          type: 'Fiberglass',
+          ratePerSqFt: 60,
+        };
+        handleUpdateDesign(updated);
+      } else if (action === 'add_glass') {
+        setSelectedComponent({ type: 'glass', id: 'glass-02' });
       }
+    },
+    [design, handleUpdateDesign]
+  );
+
+  // Switch to another window in the project
+  const handleSelectWindow = (id: string) => {
+    if (isSaved) {
+      router.push(`/projects/${projectId}/design/${id}`);
+    } else {
+      handleSaveDesign();
+      router.push(`/projects/${projectId}/design/${id}`);
     }
   };
+
+  // Add new window to project
+  const handleAddWindow = () => {
+    if (!project) return;
+    const nextIndex = project.windows.length + 1;
+    const windowTag = `W0${nextIndex}`;
+    const newWin = addWindow(projectId, {
+      name: `Window 0${nextIndex} (Bedroom ${nextIndex})`,
+      type: 'sliding_3track',
+      width: 1800,
+      height: 1200,
+    });
+    if (newWin) {
+      router.push(`/projects/${projectId}/design/${newWin.id}`);
+    }
+  };
+
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <h2 className="text-xl font-bold text-slate-800">Project Not Found</h2>
+        <p className="text-slate-500 text-sm mt-1">
+          The requested project could not be found or has been removed.
+        </p>
+        <Link
+          href="/sales"
+          className="mt-4 px-4 py-2 bg-[#1B64F2] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+        >
+          Return to Sales & Leads
+        </Link>
+      </div>
+    );
+  }
+
+  if (!design) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6">
+        <div className="w-12 h-12 border-4 border-[#1B64F2] border-t-transparent rounded-full animate-spin mb-4" />
+        <h3 className="text-base font-bold text-slate-800">
+          Loading Parametric Design Engine...
+        </h3>
+        <p className="text-xs text-slate-500 mt-1">
+          Initializing SVG geometry, component profiles, and real-time BOM calculations.
+        </p>
+      </div>
+    );
+  }
+
+  const allWindowIds = project.windows.map((w) => w.id);
+  const tabItems = project.windows.map((w) => ({
+    id: w.id,
+    name: w.name?.replace(/Window \w+ \((.*)\)/, '$1') || 'Room',
+  }));
 
   return (
-    <div className="space-y-4 w-full px-3 sm:px-6 pb-12">
-      {/* Sleek, Compact Top Navigation Ribbon (No screen clutter) */}
-      <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Back button directly to Design Studio */}
-          <Link
-            href="/design"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#0A2E8A] transition-colors text-xs font-bold"
-            title="Back to Design Studio"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Design Studio</span>
-          </Link>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] min-h-[680px] bg-slate-100 overflow-hidden font-sans">
+      {/* 1. Header (50-60px): Project name, Window ID dropdown, Undo/Redo, Save */}
+      <DesignHeader
+        projectName={project.name}
+        windowId={design.id}
+        allWindowIds={allWindowIds}
+        onSelectWindow={handleSelectWindow}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onSave={handleSaveDesign}
+        isSaved={isSaved}
+      />
 
-          {/* Window Switcher Tabs */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            {project.windows.map((w) => (
-              <button
-                key={w.id}
-                onClick={() => router.push(`/projects/${projectId}/design/${w.id}`)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  w.id === windowId
-                    ? 'bg-white text-[#0A2E8A] shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <span className="font-mono">{w.id}</span>
-                <span className="hidden md:inline text-[11px] font-normal opacity-80">
-                  {w.name.replace(/Window \d+ \((.*)\)/, '$1')}
-                </span>
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                const nextNum = project.windows.length + 1;
-                const newWin = addWindow(projectId, {
-                  name: `Window 0${nextNum} (2 Track Sliding)`,
-                  type: 'sliding_2track',
-                  width: 1500,
-                  height: 1200,
+      {/* 2. Window Switcher Tabs: W01 Living Room, W02 Bedroom, etc. */}
+      <DesignWindowTabs
+        tabs={tabItems}
+        activeWindowId={design.id}
+        onSelectTab={handleSelectWindow}
+        onAddWindow={handleAddWindow}
+      />
+
+      {/* 3. Main Workspace: LEFT 60% SVG Technical Drawing / RIGHT 40% Contextual Config & Pricing */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left: 60% Parametric SVG Canvas */}
+        <div className="w-full lg:w-[60%] h-full relative overflow-hidden bg-white border-r border-slate-200 flex flex-col">
+          <ParametricDesignCanvas
+            design={design}
+            selectedComponentId={selectedComponent?.id || null}
+            onSelectComponent={(id, type) => {
+              if (id) {
+                setSelectedComponent({
+                  type: type || 'glass',
+                  id,
                 });
-                if (newWin) {
-                  router.push(`/projects/${projectId}/design/${newWin.id}`);
-                }
-              }}
-              className="p-1 px-2 text-slate-600 hover:text-[#0A2E8A] hover:bg-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
-              title="Add another window"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Window</span>
-            </button>
-          </div>
-
-          <span className="text-slate-300 text-xs hidden lg:inline">•</span>
-          <span className="text-xs text-slate-500 truncate max-w-xs hidden lg:inline font-medium">
-            {project.name}
-          </span>
+              } else {
+                setSelectedComponent(null);
+              }
+            }}
+            onAddComponentAction={handleAddComponentAction}
+            onDimensionChange={(width, height) => {
+              handleUpdateDesign({
+                ...design,
+                width,
+                height,
+              });
+            }}
+          />
         </div>
 
-        {/* Small, Non-intrusive View Mode Pills & Actions */}
-        <div className="flex items-center gap-2">
-          {/* View Mode Pills */}
-          <div className="flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px] font-bold">
-            <button
-              onClick={() => setActiveTab('blueprint')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                activeTab === 'blueprint'
-                  ? 'bg-white text-[#0A2E8A] shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              CAD Blueprint
-            </button>
-            <button
-              onClick={() => setActiveTab('realistic')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
-                activeTab === 'realistic'
-                  ? 'bg-white text-[#0A2E8A] shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Realistic 2D
-            </button>
-            <button
-              onClick={() => setActiveTab('room')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
-                activeTab === 'room'
-                  ? 'bg-[#0A2E8A] text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Room Mockup</span>
-            </button>
-          </div>
-
-          <div className="h-5 w-px bg-slate-200" />
-
-          {/* Duplicate & Delete */}
-          <button
-            onClick={handleDuplicate}
-            title="Duplicate"
-            className="p-1.5 text-slate-500 hover:text-[#0A2E8A] hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <Copy className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={handleDelete}
-            title="Delete"
-            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Direct Next Button: Proceed to Quotation */}
-          <button
-            onClick={handleNextQuotation}
-            className="px-4 py-1.5 bg-[#0A2E8A] hover:bg-[#08256E] text-white font-bold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
-          >
-            <span>Next: Quotation</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Designer Studio: 65% Left Canvas / 35% Right Configurator */}
-      <div className="flex flex-col lg:flex-row gap-5 items-start w-full">
-        {/* Left: Interactive Canvas (65% Width) */}
-        <div className="w-full lg:w-[65%] space-y-3">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm min-h-[720px] h-[calc(100vh-170px)] flex flex-col justify-between">
-            {activeTab === 'room' ? (
-              <RoomVisualizer windowDesign={windowDesign} />
-            ) : (
-              <div className="w-full flex-1 min-h-[580px] relative overflow-hidden rounded-xl">
-                <WindowCanvas
-                  type={windowDesign.type}
-                  width={windowDesign.width}
-                  height={windowDesign.height}
-                  leftHeight={windowDesign.leftHeight}
-                  rightHeight={windowDesign.rightHeight}
-                  topWidth={windowDesign.topWidth}
-                  bottomWidth={windowDesign.bottomWidth}
-                  slopeAngle={windowDesign.slopeAngle}
-                  cornerExtensions={windowDesign.cornerExtensions}
-                  boardX={windowDesign.boardX}
-                  boardY={windowDesign.boardY}
-                  allWindows={project.windows}
-                  activeWindowId={windowDesign.id}
-                  onSelectWindow={(targetId) => {
-                    router.push(`/projects/${projectId}/design/${targetId}`);
-                  }}
-                  onAddNewWindow={(pos) => {
-                    const nextNum = project.windows.length + 1;
-                    const created = addWindow(projectId, {
-                      name: `Window 0${nextNum} (2 Track Sliding)`,
-                      type: 'sliding_2track',
-                      width: 1500,
-                      height: 1200,
-                      boardX: pos?.x,
-                      boardY: pos?.y,
-                    });
-                    if (created) {
-                      router.push(`/projects/${projectId}/design/${created.id}`);
-                    }
-                  }}
-                  onPositionChange={(pos) => {
-                    handleUpdate(pos);
-                  }}
-                  onCornerPlus={(corner) => {
-                    handleUpdate({
-                      cornerExtensions: [
-                        {
-                          corner,
-                          type: 'triangle',
-                          width: 400,
-                          height: 400,
-                          angle: 45,
-                        },
-                      ],
-                    });
-                  }}
-                  onDimensionsChange={(dims) => {
-                    handleUpdate(dims);
-                  }}
-                  profileBrand={windowDesign.profileBrand}
-                  profileColor={windowDesign.profileColor}
-                  glassType={windowDesign.glassType}
-                  meshType={windowDesign.meshType}
-                  openingDirection={windowDesign.openingDirection}
-                  mode={activeTab}
-                  showDimensions={true}
-                  className="w-full h-full"
-                />
-              </div>
-            )}
-
-            {/* Bottom Specs Strip */}
-            <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500">
-              <div className="flex items-center gap-3 text-[11px]">
-                <span>
-                  Profile: <strong className="text-slate-800">{windowDesign.profileBrand} 60mm</strong>
-                </span>
-                <span>•</span>
-                <span>
-                  Tolerance: <strong className="text-slate-800">±1.0 mm</strong>
-                </span>
-                <span>•</span>
-                <span>
-                  Welding: <strong className="text-slate-800">+6 mm</strong>
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Parametric Real-time BOM Synced</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Step-by-Step Configurator Controls (35% Width) */}
-        <div className="w-full lg:w-[35%]">
-          <WindowControls
-            design={windowDesign}
-            onChange={handleUpdate}
-            onNext={handleNextQuotation}
+        {/* Right: 40% Contextual Configuration & Pricing Panel */}
+        <div className="w-full lg:w-[40%] h-full overflow-hidden flex flex-col">
+          <ContextualConfigPanel
+            design={design}
+            selectedComponent={selectedComponent}
+            onSelectComponent={(comp) => setSelectedComponent(comp)}
+            onUpdateDesign={(updated) => handleUpdateDesign(updated)}
+            onSaveDesign={handleSaveDesign}
+            onContinueToQuotation={handleContinueToQuotation}
+            isSaving={isSaving}
           />
         </div>
       </div>
