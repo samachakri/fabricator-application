@@ -83,19 +83,6 @@ export const DesignWindowTabs: React.FC<DesignWindowTabsProps> = ({
         <Plus className="w-3.5 h-3.5 text-slate-500" />
         <span>Add Window</span>
       </button>
-
-      {/* Dedicated Delete Window Option in Ribbon */}
-      {tabs.length > 1 && onDeleteTab && (
-        <button
-          type="button"
-          onClick={() => onDeleteTab(activeWindowId)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors border border-rose-200 shrink-0 cursor-pointer"
-          title={`Delete active window (${activeWindowId})`}
-        >
-          <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-          <span>Delete Window</span>
-        </button>
-      )}
     </div>
   );
 };
