@@ -253,7 +253,28 @@ export default function SalesPage() {
     }
   };
 
-  // Dynamic Pending Payments Count
+  // Helper to format currency into Lakhs (L) or Crores (Cr) or standard INR
+  const formatPipelineCurrency = (val: number) => {
+    if (val >= 10000000) {
+      return `₹${(val / 10000000).toFixed(2)} Cr`;
+    } else if (val >= 100000) {
+      return `₹${(val / 100000).toFixed(1)} L`;
+    } else if (val > 0) {
+      return `₹${val.toLocaleString('en-IN')}`;
+    }
+    return '₹0';
+  };
+
+  // 1. Total Pipeline Value (Sum of all deal values)
+  const totalPipelineAmount = useMemo(() => {
+    return projects.reduce((sum, p) => sum + (Number(p.estimatedValue) || 0), 0);
+  }, [projects]);
+
+  const totalPipelineDisplay = useMemo(() => {
+    return formatPipelineCurrency(totalPipelineAmount);
+  }, [totalPipelineAmount]);
+
+  // 2. Dynamic Pending Payments Count
   const pendingPaymentsCount = useMemo(() => {
     return projects.filter((p) => {
       const stageLower = (p.dealStage || '').toLowerCase();
@@ -269,23 +290,62 @@ export default function SalesPage() {
     }).length;
   }, [projects]);
 
-  // KPI Calculations matching screenshot
-  const totalPipelineValue = '₹34.8 L';
-  const activeLeadsCount = 24;
-  const pendingQuotesCount = 9;
-  const winRate = '34%';
+  // 3. Dynamic Quotations Sent Count & Total Value
+  const { quotationsCount, quotationsValue } = useMemo(() => {
+    const list = projects.filter(
+      (p) =>
+        p.dealStage === 'Quotation Sent' ||
+        p.status === 'Quotation Sent' ||
+        p.currentStage === 'quotation'
+    );
+    const totalVal = list.reduce((sum, p) => sum + (Number(p.estimatedValue) || 0), 0);
+    return {
+      quotationsCount: list.length,
+      quotationsValue: totalVal,
+    };
+  }, [projects]);
+
+  // 4. Dynamic Won / Converted Count
+  const wonCount = useMemo(() => {
+    return projects.filter((p) => {
+      const stage = (p.dealStage || '').toLowerCase();
+      const status = (p.status || '').toLowerCase();
+      return (
+        stage.includes('won') ||
+        stage.includes('closed') ||
+        stage.includes('completed') ||
+        status === 'in production' ||
+        status === 'completed'
+      );
+    }).length;
+  }, [projects]);
+
+  // 5. Active Leads (In Progress)
+  const activeLeadsCount = useMemo(() => {
+    return projects.filter((p) => {
+      const stage = (p.dealStage || '').toLowerCase();
+      const status = (p.status || '').toLowerCase();
+      return status !== 'completed' && !stage.includes('closed');
+    }).length;
+  }, [projects]);
+
+  // 6. Win Rate Percentage
+  const winRate = useMemo(() => {
+    if (projects.length === 0) return '0%';
+    const pct = Math.round((wonCount / projects.length) * 100);
+    return `${pct}%`;
+  }, [projects.length, wonCount]);
 
   // Filter projects by tab & search
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
       // Tab filter
       if (activeTab === 'quotes') {
-        if (
-          p.dealStage !== 'Quotation Sent' &&
-          p.status !== 'Quotation Sent'
-        ) {
-          return false;
-        }
+        const isQuote =
+          p.dealStage === 'Quotation Sent' ||
+          p.status === 'Quotation Sent' ||
+          p.currentStage === 'quotation';
+        if (!isQuote) return false;
       } else if (activeTab === 'pending_payments') {
         const stageLower = (p.dealStage || '').toLowerCase();
         const statusLower = (p.status || '').toLowerCase();
@@ -298,13 +358,15 @@ export default function SalesPage() {
           p.status === 'Advance Pending';
         if (!isPending) return false;
       } else if (activeTab === 'won') {
-        if (
-          p.dealStage !== 'Won - In Production' &&
-          p.status !== 'In Production' &&
-          p.status !== 'Completed'
-        ) {
-          return false;
-        }
+        const stage = (p.dealStage || '').toLowerCase();
+        const status = (p.status || '').toLowerCase();
+        const isWon =
+          stage.includes('won') ||
+          stage.includes('closed') ||
+          stage.includes('completed') ||
+          status === 'in production' ||
+          status === 'completed';
+        if (!isWon) return false;
       }
 
       // Search filter
@@ -329,6 +391,21 @@ export default function SalesPage() {
       return true;
     });
   }, [projects, activeTab, searchQuery]);
+
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / pageSize));
+
+  // Auto-adjust page if current page exceeds total pages
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedProjects = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProjects.slice(start, start + pageSize);
+  }, [filteredProjects, currentPage, pageSize]);
 
 
 
@@ -562,7 +639,7 @@ export default function SalesPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">
-              {totalPipelineValue}
+              {totalPipelineDisplay}
             </span>
             <span className="text-xs font-bold text-emerald-600 flex items-center">
               ↗ +12%
@@ -602,10 +679,10 @@ export default function SalesPage() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black text-slate-900 tracking-tight">
-              {pendingQuotesCount}
+              {quotationsCount}
             </span>
             <span className="text-xs font-semibold text-blue-700">
-              ₹12.4 L value
+              {formatPipelineCurrency(quotationsValue)} value
             </span>
           </div>
         </div>
@@ -654,7 +731,7 @@ export default function SalesPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            Quotations Sent (9)
+            Quotations Sent ({quotationsCount})
           </button>
           <button
             onClick={() => setActiveTab('pending_payments')}
@@ -683,7 +760,7 @@ export default function SalesPage() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            Won / Converted (5)
+            Won / Converted ({wonCount})
           </button>
         </div>
 
@@ -758,7 +835,7 @@ export default function SalesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredProjects.map((p, idx) => {
+              {paginatedProjects.map((p, idx) => {
                 // Derive initials
                 const initials = p.customer.name
                   .split(' ')
@@ -828,8 +905,8 @@ export default function SalesPage() {
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
             <span>
-              Showing {Math.min((currentPage - 1) * 10 + 1, 38)}-
-              {Math.min(currentPage * 10, 38)} of 38 leads
+              Showing {filteredProjects.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-
+              {Math.min(currentPage * pageSize, filteredProjects.length)} of {filteredProjects.length} leads
             </span>
             <div className="flex items-center gap-1.5">
               <span>Rows per page:</span>
@@ -855,7 +932,7 @@ export default function SalesPage() {
               </button>
             )}
 
-            {[1, 2, 3, 4].map((pageNum) => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
               <button
                 key={pageNum}
                 type="button"
@@ -870,10 +947,10 @@ export default function SalesPage() {
               </button>
             ))}
 
-            {currentPage < 4 && (
+            {currentPage < totalPages && (
               <button
                 type="button"
-                onClick={() => setCurrentPage((prev) => Math.min(4, prev + 1))}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
                 title="Go to next page"
               >
