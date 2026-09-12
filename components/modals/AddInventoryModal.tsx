@@ -19,15 +19,18 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
   const [brandName, setBrandName] = useState(brands[0] || 'VEKA Systems');
   const [unit, setUnit] = useState('meter');
   const [profileLength, setProfileLength] = useState('20 feet');
-  const [profileCount, setProfileCount] = useState<number>(2000);
+  const [feetPerBar, setFeetPerBar] = useState<number>(20);
+  const [profileCount, setProfileCount] = useState<number>(50);
   const [pricePerProfile, setPricePerProfile] = useState<number>(1200);
-  const [minStock, setMinStock] = useState<number>(100);
+  const [minStock, setMinStock] = useState<number>(20);
   const [successMsg, setSuccessMsg] = useState(false);
 
   if (!isOpen) return null;
 
   // Real-time calculations
   const totalValuation = (profileCount || 0) * (pricePerProfile || 0);
+  const totalLinearFeet = Math.round((profileCount || 0) * (feetPerBar || 0) * 10) / 10;
+  const totalLinearMeters = Math.round(totalLinearFeet * 0.3048 * 10) / 10;
 
   // Common quick-pick presets
   const seriesPresets = [
@@ -75,7 +78,13 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
       ? 'steel'
       : 'profile';
 
-    const secondaryStockDetail = `${profileCount.toLocaleString('en-IN')} Profiles (${profileLength} each)`;
+    const calculatedStock = (category === 'Profile' || category === 'Steel')
+      ? (unit === 'meter' || unit === 'm' ? totalLinearMeters : totalLinearFeet)
+      : Number(profileCount);
+
+    const secondaryStockDetail = (category === 'Profile' || category === 'Steel')
+      ? `${profileCount} Bars × ${feetPerBar} ft each (${totalLinearMeters} m)`
+      : `${profileCount.toLocaleString('en-IN')} Units (${profileLength})`;
 
     addInventoryItem({
       sku,
@@ -97,10 +106,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
       brand: trimmedBrand as any,
       brandName: trimmedBrand,
       unit: unit === 'meter' ? 'm' : unit,
-      stockQty: Number(profileCount),
+      stockQty: calculatedStock,
       reservedQty: 0,
-      availableQty: Number(profileCount),
-      currentStock: Number(profileCount),
+      availableQty: calculatedStock,
+      currentStock: calculatedStock,
       minStock: Number(minStock),
       reorderPoint: Number(minStock),
       unitPrice: Number(pricePerProfile),
@@ -108,6 +117,10 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
       status,
       secondaryStockDetail,
       iconType,
+      barLengthFeet: feetPerBar,
+      barCount: Number(profileCount),
+      totalFeet: totalLinearFeet,
+      totalMeters: totalLinearMeters,
     });
 
     setSuccessMsg(true);
@@ -273,43 +286,64 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                 </select>
               </div>
 
-              {/* Length / Dimension (Supports both Profile & Glass Measurements) */}
+              {/* Length per Bar (Feet) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Length / Dimension *</span>
+                  <span>Feet per Quantity / Bar *</span>
+                  <span className="text-[10px] text-indigo-600 font-bold">Standard: 20 ft</span>
                 </label>
                 <div className="space-y-1.5">
-                  <input
-                    type="text"
-                    required
-                    value={profileLength}
-                    onChange={(e) => setProfileLength(e.target.value)}
-                    placeholder="e.g. 20 feet, 6.0m, or Glass 4ft x 6ft, 1200 x 1800 mm..."
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      required
+                      value={feetPerBar}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setFeetPerBar(val);
+                        setProfileLength(`${val} feet`);
+                      }}
+                      placeholder="e.g. 20"
+                      className="w-full pl-3.5 pr-14 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary select-none">
+                      Feet
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {['20 feet', '6.0 meters', '4ft × 6ft (Glass)', '1200 × 1800 mm'].map((lp) => (
+                    {[
+                      { label: '20 ft (Std)', val: 20 },
+                      { label: '19.5 ft', val: 19.5 },
+                      { label: '16 ft', val: 16 },
+                      { label: '21.3 ft (6.5m)', val: 21.3 },
+                      { label: '6.0m (19.7 ft)', val: 19.685 },
+                    ].map((preset) => (
                       <button
                         type="button"
-                        key={lp}
-                        onClick={() => setProfileLength(lp)}
+                        key={preset.label}
+                        onClick={() => {
+                          setFeetPerBar(preset.val);
+                          setProfileLength(`${preset.val} feet`);
+                        }}
                         className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
-                          profileLength === lp
-                            ? 'bg-slate-800 text-white'
+                          feetPerBar === preset.val
+                            ? 'bg-indigo-600 text-white'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        {lp}
+                        {preset.label}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Quantity */}
+              {/* Quantity of Bars */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Quantity *
+                  Quantity (Bars / Units) *
                 </label>
                 <div className="relative">
                   <input
@@ -318,16 +352,19 @@ export default function AddInventoryModal({ isOpen, onClose }: AddInventoryModal
                     required
                     value={profileCount}
                     onChange={(e) => setProfileCount(Number(e.target.value))}
-                    placeholder="e.g. 2000"
+                    placeholder="e.g. 50"
                     className="w-full pl-3.5 pr-16 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
                   />
-                  <span className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary select-none">
-                    Qty
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary select-none">
+                    Bars
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  e.g. <strong>{profileCount.toLocaleString('en-IN')}</strong> units of {profileLength}
-                </p>
+                <div className="mt-2 p-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-950 flex items-center justify-between">
+                  <span className="font-semibold text-slate-600">Calculated Linear Total:</span>
+                  <span className="font-black text-indigo-700">
+                    {profileCount} Bars × {feetPerBar} ft = {totalLinearFeet.toLocaleString('en-IN')} ft ({totalLinearMeters.toLocaleString('en-IN')} m)
+                  </span>
+                </div>
               </div>
 
               {/* Price for Each */}

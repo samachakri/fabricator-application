@@ -23,6 +23,8 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
   const [currentStock, setCurrentStock] = useState<number>(0);
   const [minStock, setMinStock] = useState<number>(0);
   const [secondaryStockDetail, setSecondaryStockDetail] = useState('');
+  const [barCount, setBarCount] = useState<number>(0);
+  const [barLengthFeet, setBarLengthFeet] = useState<number>(20);
   const [success, setSuccess] = useState(false);
 
   const seriesPresets = [
@@ -46,11 +48,15 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
       setCurrentStock(item.currentStock || 0);
       setMinStock(item.minStock || 0);
       setSecondaryStockDetail(item.secondaryStockDetail || '');
+      setBarCount(item.barCount ?? Math.max(1, Math.round((item.currentStock || 0) / 6)));
+      setBarLengthFeet(item.barLengthFeet ?? 20);
     }
   }, [item]);
 
   if (!isOpen || !item) return null;
 
+  const totalLinearFeet = Math.round((barCount || 0) * (barLengthFeet || 0) * 10) / 10;
+  const totalLinearMeters = Math.round(totalLinearFeet * 0.3048 * 10) / 10;
   const totalValuation = currentStock * unitPrice;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,6 +71,15 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
 
     const status: InventoryItem['status'] =
       currentStock === 0 ? 'Out of Stock' : currentStock <= minStock ? 'Low Stock' : 'In Stock';
+
+    const isProfileOrSteel = item.category === 'Profile' || item.category === 'Steel';
+    const computedStock = isProfileOrSteel
+      ? (unit === 'm' || unit === 'meter' ? totalLinearMeters : totalLinearFeet)
+      : Number(currentStock);
+
+    const updatedSecondaryDetail = isProfileOrSteel
+      ? `${barCount} Bars × ${barLengthFeet} ft each (${totalLinearMeters} m)`
+      : secondaryStockDetail.trim() || undefined;
 
     updateInventoryItem(item.id, {
       name: name.trim(),
@@ -85,9 +100,15 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
         : 'other',
       unit: unit === 'meter' ? 'm' : unit,
       unitPrice: Number(unitPrice),
-      currentStock: Number(currentStock),
+      currentStock: computedStock,
+      stockQty: computedStock,
+      availableQty: Math.max(0, computedStock - (item.reservedQty || 0)),
       minStock: Number(minStock),
-      secondaryStockDetail: secondaryStockDetail.trim() || undefined,
+      secondaryStockDetail: updatedSecondaryDetail,
+      barLengthFeet: Number(barLengthFeet),
+      barCount: Number(barCount),
+      totalFeet: totalLinearFeet,
+      totalMeters: totalLinearMeters,
       status,
     });
 
@@ -271,27 +292,63 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                 />
               </div>
 
-              {/* Quantity */}
+              {/* Quantity (Bars / Units) */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
-                  <span>Quantity *</span>
+                  <span>Quantity (Bars / Stock) *</span>
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  value={currentStock}
-                  onChange={(e) => setCurrentStock(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
-                />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Adding stock above minimum threshold clears Low Stock and hides Reorder button.
-                </p>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={barCount}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setBarCount(val);
+                      setCurrentStock(val);
+                    }}
+                    className="w-full pl-3.5 pr-14 py-2.5 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary select-none">
+                    Bars
+                  </span>
+                </div>
+              </div>
+
+              {/* Feet per Bar */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Feet per Bar / Unit *</span>
+                  <span className="text-[10px] text-indigo-600 font-bold">Standard: 20 ft</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    required
+                    value={barLengthFeet}
+                    onChange={(e) => setBarLengthFeet(Number(e.target.value))}
+                    className="w-full pl-3.5 pr-14 py-2.5 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-secondary select-none">
+                    Feet
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Calculation Banner */}
+              <div className="md:col-span-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-950 flex items-center justify-between">
+                <span className="font-semibold text-slate-600">Calculated Linear Total:</span>
+                <span className="font-black text-indigo-700">
+                  {barCount} Bars × {barLengthFeet} ft = {totalLinearFeet.toLocaleString('en-IN')} ft ({totalLinearMeters.toLocaleString('en-IN')} m)
+                </span>
               </div>
 
               {/* Min Stock */}
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Min Stock (Low Stock Alert Threshold) *
                 </label>
@@ -303,20 +360,6 @@ export default function EditItemModal({ isOpen, onClose, item }: EditItemModalPr
                   value={minStock}
                   onChange={(e) => setMinStock(Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                />
-              </div>
-
-              {/* Length / Dimension */}
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Length / Dimension (e.g. 20 feet, 6.0m, or Glass 4ft x 6ft)
-                </label>
-                <input
-                  type="text"
-                  value={secondaryStockDetail}
-                  onChange={(e) => setSecondaryStockDetail(e.target.value)}
-                  placeholder="e.g. 20 feet, 6.0m, or Glass 4ft x 6ft, 1200 x 1800 mm..."
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
             </div>

@@ -232,6 +232,10 @@ export interface InventoryItem {
   binLocation: string;
   rackLocation?: string;
   iconType?: 'profile' | 'steel' | 'sliding' | 'glass' | 'hardware' | 'gasket' | 'roll';
+  barLengthFeet?: number;
+  barCount?: number;
+  totalFeet?: number;
+  totalMeters?: number;
 }
 
 export interface ProductionOrder {
