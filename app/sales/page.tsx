@@ -76,6 +76,7 @@ export default function SalesPage() {
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Load column order, titles, and custom columns from localStorage
   React.useEffect(() => {
@@ -864,11 +865,12 @@ export default function SalesPage() {
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
             <span>
-              Showing 1-{filteredProjects.length} of 38 leads
+              Showing {Math.min((currentPage - 1) * 10 + 1, 38)}-
+              {Math.min(currentPage * 10, 38)} of 38 leads
             </span>
             <div className="flex items-center gap-1.5">
               <span>Rows per page:</span>
-              <select className="border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none">
+              <select className="border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none cursor-pointer">
                 <option>10</option>
                 <option>25</option>
                 <option>50</option>
@@ -877,26 +879,45 @@ export default function SalesPage() {
           </div>
 
           <div className="flex items-center gap-1">
-            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 font-medium">
-              <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Prev</span>
-            </button>
-            <button className="w-7 h-7 rounded-lg bg-[#0A2E8A] text-white font-bold flex items-center justify-center">
-              1
-            </button>
-            <button className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium flex items-center justify-center">
-              2
-            </button>
-            <button className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium flex items-center justify-center">
-              3
-            </button>
-            <button className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium flex items-center justify-center">
-              4
-            </button>
-            <button className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 font-medium">
-              <span>Next</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+            {/* Prev button: ONLY shown when user is on 2nd page or higher */}
+            {currentPage > 1 && (
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                title="Go to previous page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+            )}
+
+            {[1, 2, 3, 4].map((pageNum) => (
+              <button
+                key={pageNum}
+                type="button"
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors cursor-pointer ${
+                  currentPage === pageNum
+                    ? 'bg-[#0A2E8A] text-white shadow-xs'
+                    : 'border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+
+            {currentPage < 4 && (
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(4, prev + 1))}
+                className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                title="Go to next page"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
