@@ -43,7 +43,7 @@ import {
 import { ProjectStatusDropdown } from '@/components/sales/ProjectStatusDropdown';
 
 const STORAGE_KEY_CUSTOM_COLUMNS = 'fabricator_pro_sales_custom_columns_v1';
-const STORAGE_KEY_COLUMN_ORDER = 'fabricator_pro_sales_column_order_v3';
+const STORAGE_KEY_COLUMN_ORDER = 'fabricator_pro_sales_column_order_v4';
 const STORAGE_KEY_COLUMN_TITLES = 'fabricator_pro_sales_column_titles_v2';
 
 const DEFAULT_SYSTEM_COLUMN_ORDER = [
@@ -114,9 +114,6 @@ export default function SalesPage() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Filter out legacy 'lastActivity' column
           const clean = parsed.filter((id) => id !== 'lastActivity');
-          if (!clean.includes('status')) {
-            clean.push('status');
-          }
           // Ensure any custom columns are present
           loadedCols.forEach((c) => {
             if (!clean.includes(c.id)) clean.push(c.id);
@@ -181,15 +178,40 @@ export default function SalesPage() {
     }
   };
 
+  const DELETABLE_SYSTEM_COLUMNS = ['dealValue', 'dealStage', 'status', 'owner'];
+  const missingSystemColumns = useMemo(() => {
+    return DELETABLE_SYSTEM_COLUMNS.filter((id) => !columnOrder.includes(id));
+  }, [columnOrder]);
+
+  const handleRestoreSystemColumn = (colId: string) => {
+    if (!columnOrder.includes(colId)) {
+      const newOrder = [...columnOrder, colId];
+      setColumnOrder(newOrder);
+      try {
+        localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(newOrder));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const handleDeleteColumn = (colId: string) => {
-    const updated = customColumns.filter((c) => c.id !== colId);
-    saveColumns(updated);
-    const newOrder = columnOrder.filter((id) => id !== colId);
-    setColumnOrder(newOrder);
-    try {
-      localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(newOrder));
-    } catch (e) {
-      console.error(e);
+    const colTitle =
+      columnTitles[colId] ||
+      DEFAULT_COLUMN_TITLES[colId] ||
+      customColumns.find((c) => c.id === colId)?.name ||
+      colId;
+
+    if (window.confirm(`Are you sure you want to remove the "${colTitle}" column?`)) {
+      const updated = customColumns.filter((c) => c.id !== colId);
+      saveColumns(updated);
+      const newOrder = columnOrder.filter((id) => id !== colId);
+      setColumnOrder(newOrder);
+      try {
+        localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(newOrder));
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 
@@ -525,11 +547,13 @@ export default function SalesPage() {
         onClose={() => setIsNewLeadOpen(false)}
       />
 
-      {/* Modal for adding new CRM column */}
       <AddColumnModal
         isOpen={isAddColumnOpen}
         onClose={() => setIsAddColumnOpen(false)}
         onAddColumn={handleAddColumn}
+        availableSystemColumns={missingSystemColumns}
+        onRestoreSystemColumn={handleRestoreSystemColumn}
+        columnTitles={columnTitles}
       />
 
       {/* 3. Top 4 Metric KPI Cards matching Screenshot */}
@@ -750,6 +774,7 @@ export default function SalesPage() {
                     colId;
                   const isCustom = !!customCol;
                   const icon = customCol ? getCustomColIcon(customCol.type) : undefined;
+                  const isDeletable = colId !== 'customer' && colId !== 'project';
 
                   return (
                     <th key={colId} className="px-4 py-3.5 whitespace-nowrap">
@@ -763,7 +788,7 @@ export default function SalesPage() {
                         onMoveLeft={() => moveColumn(colId, 'left')}
                         onMoveRight={() => moveColumn(colId, 'right')}
                         onRename={(newTitle) => handleRenameColumn(colId, newTitle)}
-                        onDelete={isCustom ? () => handleDeleteColumn(colId) : undefined}
+                        onDelete={isDeletable ? () => handleDeleteColumn(colId) : undefined}
                       />
                     </th>
                   );

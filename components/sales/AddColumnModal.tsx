@@ -8,12 +8,18 @@ interface AddColumnModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddColumn: (column: CustomCRMColumn) => void;
+  availableSystemColumns?: string[];
+  onRestoreSystemColumn?: (colId: string) => void;
+  columnTitles?: Record<string, string>;
 }
 
 export const AddColumnModal: React.FC<AddColumnModalProps> = ({
   isOpen,
   onClose,
   onAddColumn,
+  availableSystemColumns,
+  onRestoreSystemColumn,
+  columnTitles,
 }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState<'text' | 'number' | 'mail' | 'status'>('text');
@@ -109,6 +115,34 @@ export const AddColumnModal: React.FC<AddColumnModalProps> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+        {/* Optional: Restore Hidden Standard Columns */}
+        {availableSystemColumns && availableSystemColumns.length > 0 && (
+          <div className="mx-6 mt-5 p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 space-y-2">
+            <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+              <span>Restore Standard Columns</span>
+              <span className="text-[10px] text-blue-700 font-semibold">Click to re-enable</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableSystemColumns.map((colId) => {
+                const label = columnTitles?.[colId] || colId;
+                return (
+                  <button
+                    key={colId}
+                    type="button"
+                    onClick={() => {
+                      onRestoreSystemColumn?.(colId);
+                      onClose();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#0A2E8A] text-slate-700 hover:text-white border border-blue-200 hover:border-[#0A2E8A] rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer group"
+                  >
+                    <Plus className="w-3 h-3 text-blue-600 group-hover:text-white" />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">

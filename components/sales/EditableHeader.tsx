@@ -130,15 +130,15 @@ export const EditableHeader: React.FC<EditableHeaderProps> = ({
 
       {/* Right Reorder Arrow & Optional Custom Delete */}
       <div className="flex items-center gap-0.5 shrink-0">
-        {isCustom && onDelete && (
+        {onDelete && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onDelete();
             }}
-            className="opacity-0 group-hover/header:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-opacity"
-            title="Delete column"
+            className="opacity-0 group-hover/header:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer"
+            title={`Delete ${title} column`}
           >
             <Trash2 className="w-3 h-3" />
           </button>
