@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
     { label: 'Sales', href: '/sales', icon: Banknote },
     { label: 'Inventory', href: '/inventory', icon: Package },
     { label: 'Quotations', href: '/projects/PRJ-1042/quotation', icon: FileText },
-    { label: 'Production', href: '/projects/PRJ-1042/production', icon: Factory },
+    { label: 'Production', href: '/production', icon: Factory },
   ];
 
   const bottomItems = [
