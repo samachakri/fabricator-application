@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mail, Edit2, Check, Plus, ChevronDown, Hash } from 'lucide-react';
+import { Mail, Edit2, Check, Plus, ChevronDown, Hash, Trash2 } from 'lucide-react';
 import { CustomCRMColumn } from '@/lib/types';
 
 interface CRMCellProps {
@@ -9,6 +9,7 @@ interface CRMCellProps {
   value: any;
   onSave: (val: any) => void;
   onAddOptionToColumn?: (colId: string, newOption: string) => void;
+  onDeleteOptionFromColumn?: (colId: string, option: string) => void;
 }
 
 export const CRMCell: React.FC<CRMCellProps> = ({
@@ -16,6 +17,7 @@ export const CRMCell: React.FC<CRMCellProps> = ({
   value,
   onSave,
   onAddOptionToColumn,
+  onDeleteOptionFromColumn,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value !== undefined && value !== null ? String(value) : '');
@@ -250,25 +252,43 @@ export const CRMCell: React.FC<CRMCellProps> = ({
                 const isSelected = opt === currentVal;
                 const optStyle = getBadgeStyle(opt);
                 return (
-                  <button
+                  <div
                     key={opt}
-                    type="button"
                     onClick={() => {
                       onSave(opt);
                       setIsStatusOpen(false);
                     }}
-                    className={`w-full px-2 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors ${
+                    className={`group/item w-full px-2 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-slate-100 text-slate-900 font-bold'
                         : 'hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className={`w-1.5 h-1.5 rounded-full ${optStyle.dot}`} />
-                      <span>{opt}</span>
+                      <span className="truncate">{opt}</span>
                     </div>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0A2E8A]" />}
-                  </button>
+                    <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#0A2E8A]" />}
+                      {onDeleteOptionFromColumn && options.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteOptionFromColumn(column.id, opt);
+                            if (currentVal === opt) {
+                              const remaining = options.filter((o) => o !== opt);
+                              onSave(remaining[0] || '');
+                            }
+                          }}
+                          className="opacity-0 group-hover/item:opacity-100 p-0.5 text-slate-400 hover:text-rose-600 rounded transition-all"
+                          title={`Delete ${opt} status`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>

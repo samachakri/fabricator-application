@@ -33,6 +33,8 @@ interface StoreContextType {
     location?: string;
   }) => Project;
   updateProject: (projectId: string, updates: Partial<Project>) => void;
+  deleteProject: (projectId: string) => void;
+  deleteProjects: (projectIds: string[]) => void;
   addWindow: (
     projectId: string,
     windowData: Partial<WindowDesign>
@@ -271,6 +273,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       })
     );
+  };
+
+  const deleteProject = (projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+  };
+
+  const deleteProjects = (projectIds: string[]) => {
+    setProjects((prev) => prev.filter((p) => !projectIds.includes(p.id)));
   };
 
   const addWindow = (
@@ -922,6 +932,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         createCustomer,
         createProject,
         updateProject,
+        deleteProject,
+        deleteProjects,
         addWindow,
         updateWindow,
         duplicateWindow,

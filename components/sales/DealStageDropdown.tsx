@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Check, ChevronDown, Plus } from 'lucide-react';
+import { Check, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { DealStage } from '@/lib/types';
 
 interface DealStageDropdownProps {
@@ -16,6 +16,7 @@ export interface StageConfig {
   bg: string;
   dot: string;
   desc?: string;
+  isCustom?: boolean;
 }
 
 export const PRESET_STAGES: StageConfig[] = [
@@ -77,8 +78,11 @@ export const PRESET_STAGES: StageConfig[] = [
   },
 ];
 
-export function getStageConfig(stage?: string): StageConfig {
-  const match = PRESET_STAGES.find((s) => s.id.toLowerCase() === stage?.toLowerCase());
+const STORAGE_KEY_CUSTOM_STAGES = 'fabricator_pro_sales_custom_deal_stages_v2';
+
+export function getStageConfig(stage?: string, customStages: StageConfig[] = []): StageConfig {
+  const combined = [...customStages, ...PRESET_STAGES];
+  const match = combined.find((s) => s.id.toLowerCase() === stage?.toLowerCase());
   if (match) return match;
 
   if (stage === 'Won - In Production') {
@@ -91,7 +95,6 @@ export function getStageConfig(stage?: string): StageConfig {
     };
   }
 
-  // Custom status fallback
   return {
     id: stage || 'New Inquiry',
     label: stage || 'New Inquiry',
@@ -109,9 +112,36 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [customStageText, setCustomStageText] = useState('');
+  const [stages, setStages] = useState<StageConfig[]>(PRESET_STAGES);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const activeConfig = getStageConfig(currentStage);
+  // Load stages from localStorage or initialize
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_CUSTOM_STAGES);
+      if (saved) {
+        const parsed: StageConfig[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStages(parsed);
+        }
+      } else {
+        setStages(PRESET_STAGES);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const saveStages = (newStages: StageConfig[]) => {
+    setStages(newStages);
+    try {
+      localStorage.setItem(STORAGE_KEY_CUSTOM_STAGES, JSON.stringify(newStages));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const activeConfig = getStageConfig(currentStage, stages);
 
   // Close on outside click or escape
   useEffect(() => {
@@ -145,11 +175,37 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
 
   const handleCreateCustom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customStageText.trim()) return;
-    onSelectStage(customStageText.trim() as DealStage);
+    const trimmed = customStageText.trim();
+    if (!trimmed) return;
+
+    // Check if already exists
+    const exists = stages.some((s) => s.id.toLowerCase() === trimmed.toLowerCase());
+    if (!exists) {
+      const newStageItem: StageConfig = {
+        id: trimmed,
+        label: trimmed,
+        bg: 'bg-purple-50 text-purple-800 border-purple-200/60 hover:bg-purple-100/60',
+        dot: 'bg-purple-600',
+        desc: 'Custom status',
+        isCustom: true,
+      };
+      const updated = [...stages, newStageItem];
+      saveStages(updated);
+    }
+
+    onSelectStage(trimmed as DealStage);
     setCustomStageText('');
     setIsAddingCustom(false);
     setIsOpen(false);
+  };
+
+  const handleDeleteStage = (stageId: string) => {
+    const updated = stages.filter((s) => s.id !== stageId);
+    saveStages(updated);
+    // If the deleted stage was the active one, switch to first remaining
+    if (currentStage?.toLowerCase() === stageId.toLowerCase()) {
+      onSelectStage((updated[0]?.id || 'New Inquiry') as DealStage);
+    }
   };
 
   return (
@@ -173,28 +229,34 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
               Update Deal Stage
             </span>
-            <span className="text-[9px] text-slate-400 font-medium">Click to select</span>
+            <span className="text-[9px] text-slate-400 font-medium">Click to select / delete</span>
           </div>
 
-          {/* Curated list of stages */}
+          {/* List of stages */}
           <div className="max-h-60 overflow-y-auto p-1 space-y-0.5">
-            {PRESET_STAGES.map((stage) => {
+            {stages.map((stage) => {
               const isSelected = stage.id.toLowerCase() === currentStage?.toLowerCase();
               return (
-                <button
+                <div
                   key={stage.id}
-                  type="button"
-                  onClick={() => handleSelect(stage.id)}
-                  className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors ${
+                  className={`group/item w-full px-2.5 py-1.5 rounded-lg text-left text-xs flex items-center justify-between transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-blue-50/80 text-[#0A2E8A] font-bold'
                       : 'hover:bg-slate-50 text-slate-700'
                   }`}
+                  onClick={() => handleSelect(stage.id)}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${stage.dot}`} />
                     <div className="truncate">
-                      <p className="leading-tight">{stage.label}</p>
+                      <p className="leading-tight flex items-center gap-1">
+                        <span>{stage.label}</span>
+                        {stage.isCustom && (
+                          <span className="text-[9px] px-1 bg-purple-100 text-purple-700 rounded font-normal">
+                            Custom
+                          </span>
+                        )}
+                      </p>
                       {stage.desc && (
                         <p className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
                           {stage.desc}
@@ -202,8 +264,22 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
                       )}
                     </div>
                   </div>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-[#0A2E8A] shrink-0 ml-1.5" />}
-                </button>
+                  <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                    {isSelected && <Check className="w-3.5 h-3.5 text-[#0A2E8A]" />}
+                    {/* Delete status button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteStage(stage.id);
+                      }}
+                      className="opacity-0 group-hover/item:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+                      title={`Delete ${stage.label} status`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -214,7 +290,7 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddingCustom(true)}
-                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#0A2E8A] hover:bg-blue-50/80 rounded-lg font-bold transition-colors"
+                className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[#0A2E8A] hover:bg-blue-50/80 rounded-lg font-bold transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Add Custom Status</span>
@@ -256,3 +332,4 @@ export const DealStageDropdown: React.FC<DealStageDropdownProps> = ({
     </div>
   );
 };
+
