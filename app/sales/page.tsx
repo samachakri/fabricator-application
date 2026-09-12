@@ -110,7 +110,13 @@ export default function SalesPage() {
         const parsed = JSON.parse(savedOrder);
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Filter out legacy 'lastActivity' column
-          const clean = parsed.filter((id) => id !== 'lastActivity');
+          let clean = parsed.filter((id) => id !== 'lastActivity');
+          // Ensure customer column is always pinned as the first column
+          if (clean.includes('customer')) {
+            clean = ['customer', ...clean.filter((id) => id !== 'customer')];
+          } else {
+            clean = ['customer', ...clean];
+          }
           // Ensure any custom columns are present
           loadedCols.forEach((c) => {
             if (!clean.includes(c.id)) clean.push(c.id);
@@ -127,9 +133,12 @@ export default function SalesPage() {
   }, []);
 
   const moveColumn = (colId: string, direction: 'left' | 'right') => {
+    if (colId === 'customer') return; // customer column cannot be moved
     const currentIndex = columnOrder.indexOf(colId);
     if (currentIndex === -1) return;
     const targetIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    // Prevent moving before pinned customer column at position 0
+    if (columnOrder[0] === 'customer' && targetIndex === 0) return;
     if (targetIndex < 0 || targetIndex >= columnOrder.length) return;
     const updated = [...columnOrder];
     const [moved] = updated.splice(currentIndex, 1);
@@ -712,6 +721,8 @@ export default function SalesPage() {
                   const isCustom = !!customCol;
                   const icon = customCol ? getCustomColIcon(customCol.type) : undefined;
                   const isDeletable = colId !== 'customer' && colId !== 'project';
+                  const isCustomer = colId === 'customer';
+                  const minLeftIndex = columnOrder[0] === 'customer' ? 1 : 0;
 
                   return (
                     <th key={colId} className="px-4 py-3.5 text-left align-middle whitespace-nowrap">
@@ -720,8 +731,8 @@ export default function SalesPage() {
                         title={title}
                         icon={icon}
                         isCustom={isCustom}
-                        canMoveLeft={index > 0}
-                        canMoveRight={index < columnOrder.length - 1}
+                        canMoveLeft={!isCustomer && index > minLeftIndex}
+                        canMoveRight={!isCustomer && index < columnOrder.length - 1}
                         onMoveLeft={() => moveColumn(colId, 'left')}
                         onMoveRight={() => moveColumn(colId, 'right')}
                         onRename={(newTitle) => handleRenameColumn(colId, newTitle)}
