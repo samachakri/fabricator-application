@@ -72,7 +72,7 @@ export default function SalesPage() {
   const [columnOrder, setColumnOrder] = useState<string[]>(DEFAULT_SYSTEM_COLUMN_ORDER);
   const [columnTitles, setColumnTitles] = useState<Record<string, string>>(DEFAULT_COLUMN_TITLES);
   const [activeTab, setActiveTab] = useState<
-    'all' | 'open' | 'quotes' | 'pending_payments' | 'won'
+    'all' | 'quotes' | 'pending_payments' | 'won'
   >('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
@@ -273,14 +273,7 @@ export default function SalesPage() {
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
       // Tab filter
-      if (activeTab === 'open') {
-        if (
-          p.dealStage === 'Won - In Production' ||
-          p.status === 'Completed'
-        ) {
-          return false;
-        }
-      } else if (activeTab === 'quotes') {
+      if (activeTab === 'quotes') {
         if (
           p.dealStage !== 'Quotation Sent' &&
           p.status !== 'Quotation Sent'
@@ -665,16 +658,7 @@ export default function SalesPage() {
           >
             All Leads ({projects.length})
           </button>
-          <button
-            onClick={() => setActiveTab('open')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-              activeTab === 'open'
-                ? 'bg-[#0A2E8A] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            Open Deals (24)
-          </button>
+
           <button
             onClick={() => setActiveTab('quotes')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
