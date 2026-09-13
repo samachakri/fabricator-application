@@ -15,6 +15,8 @@ import { DesignWindowTabs } from '@/components/design/DesignWindowTabs';
 import { ParametricDesignCanvas } from '@/components/design/ParametricDesignCanvas';
 import { ContextualConfigPanel } from '@/components/design/ContextualConfigPanel';
 import { AddComponentAction } from '@/components/design/AddComponentMenu';
+import { DesignWelcomeModal } from '@/components/design/DesignWelcomeModal';
+import { MultipleCopiesModal } from '@/components/design/MultipleCopiesModal';
 
 export default function WindowDesignerPage() {
   const params = useParams();
@@ -55,6 +57,10 @@ export default function WindowDesignerPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Modal dialog states
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [isMultipleCopiesOpen, setIsMultipleCopiesOpen] = useState(false);
 
   // Initialize or update parametric design when project or window changes
   useEffect(() => {
@@ -290,6 +296,26 @@ export default function WindowDesignerPage() {
     }
   };
 
+  // Handle batch copies replication
+  const handleBatchCreateCopies = (copies: { tag: string; room: string; width: number; height: number; qty: number }[]) => {
+    if (!project || !design) return;
+    let lastCreatedId: string | null = null;
+
+    copies.forEach((copy) => {
+      const created = addWindow(projectId, {
+        name: `Window ${copy.tag} (${copy.room})`,
+        type: (rawWindow?.type || 'sliding_3track') as any,
+        width: copy.width,
+        height: copy.height,
+      });
+      if (created) lastCreatedId = created.id;
+    });
+
+    if (lastCreatedId) {
+      router.push(`/projects/${projectId}/design/${lastCreatedId}`);
+    }
+  };
+
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -341,6 +367,8 @@ export default function WindowDesignerPage() {
         onRedo={handleRedo}
         onSave={handleSaveDesign}
         isSaved={isSaved}
+        onOpenWelcome={() => setIsWelcomeModalOpen(true)}
+        onOpenMultipleCopies={() => setIsMultipleCopiesOpen(true)}
       />
 
       {/* 2. Window Switcher Tabs: W01 Living Room, W02 Bedroom, etc. */}
@@ -377,6 +405,7 @@ export default function WindowDesignerPage() {
                 height,
               });
             }}
+            onUpdateDesign={(updated) => handleUpdateDesign(updated)}
           />
         </div>
 
@@ -393,6 +422,29 @@ export default function WindowDesignerPage() {
           />
         </div>
       </div>
+
+      {/* 4. Welcome Setup Modal */}
+      <DesignWelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        onBrowseCatalog={() => {
+          setIsWelcomeModalOpen(false);
+        }}
+        onStartNew={(defaults) => {
+          handleUpdateDesign({
+            ...design,
+            profileColor: defaults.color,
+          });
+        }}
+      />
+
+      {/* 5. Multiple Copies / Batch Replication Modal */}
+      <MultipleCopiesModal
+        isOpen={isMultipleCopiesOpen}
+        onClose={() => setIsMultipleCopiesOpen(false)}
+        baseDesign={design}
+        onBatchCreate={handleBatchCreateCopies}
+      />
     </div>
   );
 }

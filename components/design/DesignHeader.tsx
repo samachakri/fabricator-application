@@ -23,6 +23,8 @@ interface DesignHeaderProps {
   onRedo: () => void;
   onSave: () => void;
   isSaved: boolean;
+  onOpenWelcome?: () => void;
+  onOpenMultipleCopies?: () => void;
 }
 
 export const DesignHeader: React.FC<DesignHeaderProps> = ({
@@ -36,6 +38,8 @@ export const DesignHeader: React.FC<DesignHeaderProps> = ({
   onRedo,
   onSave,
   isSaved,
+  onOpenWelcome,
+  onOpenMultipleCopies,
 }) => {
   return (
     <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between select-none z-30 shrink-0">
@@ -83,6 +87,28 @@ export const DesignHeader: React.FC<DesignHeaderProps> = ({
 
       {/* Center / Right: Undo, Redo, Save */}
       <div className="flex items-center gap-2">
+        {onOpenWelcome && (
+          <button
+            type="button"
+            onClick={onOpenWelcome}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors"
+            title="Set Default Glass & Finish"
+          >
+            <span>Set Default</span>
+          </button>
+        )}
+
+        {onOpenMultipleCopies && (
+          <button
+            type="button"
+            onClick={onOpenMultipleCopies}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+            title="Replicate window across multiple openings"
+          >
+            <span>Multiple Copies</span>
+          </button>
+        )}
+
         {/* Undo Button */}
         <button
           type="button"
