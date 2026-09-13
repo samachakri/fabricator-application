@@ -124,8 +124,9 @@ export function ContextualConfigPanel({
 
   const glassPanels = (design.panels || []).map((panel, idx) => {
     const pW = Math.round(innerW * (panel.widthRatio || 1 / panelCount));
+    const pH = Math.round(innerH * (panel.heightRatio || 1));
     const glassW = Math.max(50, panel.panelType === 'fixed' ? pW - 20 : pW - 90);
-    const glassH = Math.max(50, panel.panelType === 'fixed' ? innerH - 20 : innerH - 90);
+    const glassH = Math.max(50, panel.panelType === 'fixed' ? pH - 20 : pH - 90);
     const areaSqFt = parseFloat(mm2ToSqFt(glassW * glassH).toFixed(2));
     const cost = Math.round(areaSqFt * (design.defaultGlass.ratePerSqFt || 180));
     return {
@@ -190,6 +191,48 @@ export function ContextualConfigPanel({
       mullions: newMullions,
     });
     onSelectComponent({ type: 'panel', id: panelA.id });
+  };
+
+  // Split selected bay horizontally (Transom)
+  const handleSplitSelectedBayHorizontally = () => {
+    if (!selectedPanel) return;
+    const panelIdx = design.panels.findIndex((p) => p.id === selectedPanel.id);
+    if (panelIdx === -1) return;
+
+    const target = design.panels[panelIdx];
+    const topH = 0.35 * (target.heightRatio || 1);
+    const botH = 0.65 * (target.heightRatio || 1);
+
+    const cellTop = {
+      ...target,
+      id: `cell-${Date.now()}-top`,
+      name: `T${panelIdx + 1}`,
+      panelType: 'casement' as const,
+      openingDirection: 'top_hung' as const,
+      yRatio: target.yRatio || 0,
+      heightRatio: topH,
+      sashId: `sash-${Date.now()}-top`,
+      glassId: `glass-${Date.now()}-top`,
+    };
+    const cellBot = {
+      ...target,
+      id: `cell-${Date.now()}-bot`,
+      name: `B${panelIdx + 1}`,
+      yRatio: (target.yRatio || 0) + topH,
+      heightRatio: botH,
+      sashId: `sash-${Date.now()}-bot`,
+      glassId: `glass-${Date.now()}-bot`,
+    };
+
+    const nextPanels = [...design.panels];
+    nextPanels.splice(panelIdx, 1, cellTop, cellBot);
+
+    onUpdateDesign({
+      ...design,
+      panels: nextPanels,
+      transoms: [{ id: 'transom-01', positionRatio: 0.35, height: 60 }],
+    });
+    onSelectComponent({ type: 'panel', id: cellBot.id });
   };
 
   // Delete selected bay
@@ -310,38 +353,38 @@ export function ContextualConfigPanel({
                 </div>
               </div>
 
-              {/* Bay Width in mm */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Bay Dimensions in mm */}
+              <div className="grid grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-[11px] text-slate-500 font-semibold mb-1">
-                    Bay Width (mm)
+                    Width (mm)
                   </label>
                   <div className="relative">
                     <input
                       type="number"
-                      value={Math.round(innerW * selectedPanel.widthRatio)}
+                      value={Math.round(innerW * (selectedPanel.widthRatio || 1))}
                       onChange={(e) => {
                         const targetVal = Number(e.target.value);
                         if (!targetVal || targetVal <= 100) return;
                         const targetRatio = targetVal / innerW;
                         if (targetRatio >= 0.95 || targetRatio <= 0.05) return;
-                        const currentRatio = selectedPanel.widthRatio;
+                        const currentRatio = selectedPanel.widthRatio || 1;
                         const diff = targetRatio - currentRatio;
                         const remainingCount = design.panels.length - 1;
                         if (remainingCount <= 0) return;
                         const delta = diff / remainingCount;
                         let accumX = 0;
                         const updated = design.panels.map((p) => {
-                          const newR = p.id === selectedPanel.id ? targetRatio : Math.max(0.08, p.widthRatio - delta);
+                          const newR = p.id === selectedPanel.id ? targetRatio : Math.max(0.08, (p.widthRatio || 1) - delta);
                           const res = { ...p, xRatio: accumX, widthRatio: newR };
                           accumX += newR;
                           return res;
                         });
                         onUpdateDesign({ ...design, panels: updated });
                       }}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-2 pr-5 py-1.5 text-xs font-bold text-slate-800"
                     />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">
+                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] font-bold">
                       mm
                     </span>
                   </div>
@@ -349,9 +392,35 @@ export function ContextualConfigPanel({
 
                 <div>
                   <label className="block text-[11px] text-slate-500 font-semibold mb-1">
-                    Bug Mesh / Screen
+                    Height (mm)
                   </label>
-                  <label className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={Math.round(innerH * (selectedPanel.heightRatio || 1))}
+                      onChange={(e) => {
+                        const targetVal = Number(e.target.value);
+                        if (!targetVal || targetVal <= 100) return;
+                        const targetRatio = targetVal / innerH;
+                        if (targetRatio >= 0.95 || targetRatio <= 0.05) return;
+                        const updated = design.panels.map((p) =>
+                          p.id === selectedPanel.id ? { ...p, heightRatio: targetRatio } : p
+                        );
+                        onUpdateDesign({ ...design, panels: updated });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-2 pr-5 py-1.5 text-xs font-bold text-slate-800"
+                    />
+                    <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] font-bold">
+                      mm
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                    Bug Mesh
+                  </label>
+                  <label className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
                     <input
                       type="checkbox"
                       checked={!!selectedPanel.meshId}
@@ -363,21 +432,30 @@ export function ContextualConfigPanel({
                         );
                         onUpdateDesign({ ...design, panels: updated });
                       }}
-                      className="w-4 h-4 rounded text-blue-600 border-slate-300"
+                      className="w-3.5 h-3.5 rounded text-blue-600 border-slate-300"
                     />
-                    <span className="text-[11px] font-semibold text-slate-700">SS304 Mesh</span>
+                    <span className="text-[10px] font-semibold text-slate-700">SS304</span>
                   </label>
                 </div>
               </div>
 
               {/* Split or Delete Actions */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={handleSplitSelectedBay}
-                  className="flex-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1B64F2] border border-blue-200 rounded-lg text-xs font-bold transition-colors text-center"
+                  className="flex-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1B64F2] border border-blue-200 rounded-lg text-[11px] font-bold transition-colors text-center"
+                  title="Split this bay vertically in half"
                 >
-                  + Split Bay (Mullion)
+                  + Mullion (V)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSplitSelectedBayHorizontally}
+                  className="flex-1 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-bold transition-colors text-center"
+                  title="Split this bay horizontally into Top & Bottom Transom"
+                >
+                  + Transom (H)
                 </button>
                 {design.panels.length > 1 && (
                   <button
