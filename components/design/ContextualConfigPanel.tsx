@@ -46,6 +46,8 @@ interface ContextualConfigPanelProps {
 
 export function ContextualConfigPanel({
   design,
+  selectedComponent,
+  onSelectComponent,
   onUpdateDesign,
   onSaveDesign,
   onContinueToQuotation,
@@ -136,11 +138,270 @@ export function ContextualConfigPanel({
     };
   });
 
+  // Active selected panel for inspector
+  const selectedPanelId = selectedComponent?.id;
+  const selectedPanel = design.panels?.find((p) => p.id === selectedPanelId) || null;
+
+  // Split selected bay vertically
+  const handleSplitSelectedBay = () => {
+    if (!selectedPanel) return;
+    const panelIdx = design.panels.findIndex((p) => p.id === selectedPanel.id);
+    if (panelIdx === -1) return;
+
+    const target = design.panels[panelIdx];
+    const halfW = target.widthRatio / 2;
+
+    const panelA = {
+      ...target,
+      id: `panel-${Date.now()}-1`,
+      name: `A${panelIdx + 1}`,
+      widthRatio: halfW,
+    };
+    const panelB = {
+      ...target,
+      id: `panel-${Date.now()}-2`,
+      name: `A${panelIdx + 2}`,
+      xRatio: target.xRatio + halfW,
+      widthRatio: halfW,
+      openingDirection: target.openingDirection === 'sliding_right' ? 'sliding_left' as const : 'sliding_right' as const,
+      sashId: `sash-${Date.now()}-2`,
+      glassId: `glass-${Date.now()}-2`,
+    };
+
+    const newPanels = [...design.panels];
+    newPanels.splice(panelIdx, 1, panelA, panelB);
+    const renumbered = newPanels.map((p, i) => ({ ...p, name: `A${i + 1}` }));
+
+    // Recompute mullions
+    const newMullions = [];
+    let accumX = 0;
+    for (let i = 0; i < renumbered.length - 1; i++) {
+      accumX += renumbered[i].widthRatio;
+      newMullions.push({
+        id: `mullion-0${i + 1}`,
+        positionRatio: accumX,
+        width: 60,
+      });
+    }
+
+    onUpdateDesign({
+      ...design,
+      panels: renumbered,
+      mullions: newMullions,
+    });
+    onSelectComponent({ type: 'panel', id: panelA.id });
+  };
+
+  // Delete selected bay
+  const handleDeleteSelectedBay = () => {
+    if (!selectedPanel || design.panels.length <= 1) return;
+    const panelIdx = design.panels.findIndex((p) => p.id === selectedPanel.id);
+    if (panelIdx === -1) return;
+
+    const removed = design.panels[panelIdx];
+    const newPanels = design.panels.filter((p) => p.id !== selectedPanel.id);
+
+    const factor = 1 / (1 - removed.widthRatio);
+    let currX = 0;
+    const updatedPanels = newPanels.map((p, i) => {
+      const newW = p.widthRatio * factor;
+      const updatedP = {
+        ...p,
+        name: `A${i + 1}`,
+        xRatio: currX,
+        widthRatio: newW,
+      };
+      currX += newW;
+      return updatedP;
+    });
+
+    const newMullions = [];
+    let accumX = 0;
+    for (let i = 0; i < updatedPanels.length - 1; i++) {
+      accumX += updatedPanels[i].widthRatio;
+      newMullions.push({
+        id: `mullion-0${i + 1}`,
+        positionRatio: accumX,
+        width: 60,
+      });
+    }
+
+    onUpdateDesign({
+      ...design,
+      panels: updatedPanels,
+      mullions: newMullions,
+    });
+    onSelectComponent(null);
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] border-l border-slate-200 overflow-hidden text-slate-800 text-xs font-sans">
       {/* Scrollable Main Area */}
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5">
         
+                {/* ========================================================= */}
+        {/* 0. ACTIVE BAY / ELEMENT INSPECTOR (WinQuoter Standard)    */}
+        {/* ========================================================= */}
+        {selectedPanel ? (
+          <div className="bg-white rounded-xl border border-cyan-400 p-3.5 shadow-sm">
+            <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold text-[11px] font-mono">
+                  {selectedPanel.name || 'A1'}
+                </span>
+                <span className="font-bold text-slate-900 text-xs">
+                  Active Bay Configuration
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectComponent(null)}
+                className="text-[10px] text-slate-400 hover:text-slate-600"
+              >
+                Deselect
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                  Operation / Opening Style
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { type: 'fixed', dir: 'fixed', label: 'Fixed Glass' },
+                    { type: 'sliding', dir: 'sliding_left', label: 'Sliding (◄)' },
+                    { type: 'sliding', dir: 'sliding_right', label: 'Sliding (►)' },
+                    { type: 'casement', dir: 'casement_left', label: 'Casement (◄)' },
+                    { type: 'casement', dir: 'casement_right', label: 'Casement (►)' },
+                    { type: 'casement', dir: 'top_hung', label: 'Top Hung' },
+                  ].map((opt) => {
+                    const isCurrent =
+                      selectedPanel.panelType === opt.type &&
+                      (selectedPanel.openingDirection === opt.dir ||
+                        (opt.type === 'fixed' && selectedPanel.panelType === 'fixed'));
+                    return (
+                      <button
+                        key={opt.dir}
+                        type="button"
+                        onClick={() => {
+                          const updated = design.panels.map((p) =>
+                            p.id === selectedPanel.id
+                              ? {
+                                  ...p,
+                                  panelType: opt.type as any,
+                                  openingDirection: opt.dir as any,
+                                  sashId: opt.type === 'fixed' ? undefined : (p.sashId || `sash-${p.id}`),
+                                }
+                              : p
+                          );
+                          onUpdateDesign({ ...design, panels: updated });
+                        }}
+                        className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-all text-center ${
+                          isCurrent
+                            ? 'bg-cyan-50 text-cyan-700 border-cyan-300 shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bay Width in mm */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                    Bay Width (mm)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={Math.round(innerW * selectedPanel.widthRatio)}
+                      onChange={(e) => {
+                        const targetVal = Number(e.target.value);
+                        if (!targetVal || targetVal <= 100) return;
+                        const targetRatio = targetVal / innerW;
+                        if (targetRatio >= 0.95 || targetRatio <= 0.05) return;
+                        const currentRatio = selectedPanel.widthRatio;
+                        const diff = targetRatio - currentRatio;
+                        const remainingCount = design.panels.length - 1;
+                        if (remainingCount <= 0) return;
+                        const delta = diff / remainingCount;
+                        let accumX = 0;
+                        const updated = design.panels.map((p) => {
+                          const newR = p.id === selectedPanel.id ? targetRatio : Math.max(0.08, p.widthRatio - delta);
+                          const res = { ...p, xRatio: accumX, widthRatio: newR };
+                          accumX += newR;
+                          return res;
+                        });
+                        onUpdateDesign({ ...design, panels: updated });
+                      }}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">
+                      mm
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                    Bug Mesh / Screen
+                  </label>
+                  <label className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!selectedPanel.meshId}
+                      onChange={(e) => {
+                        const updated = design.panels.map((p) =>
+                          p.id === selectedPanel.id
+                            ? { ...p, meshId: e.target.checked ? `mesh-${p.id}` : undefined }
+                            : p
+                        );
+                        onUpdateDesign({ ...design, panels: updated });
+                      }}
+                      className="w-4 h-4 rounded text-blue-600 border-slate-300"
+                    />
+                    <span className="text-[11px] font-semibold text-slate-700">SS304 Mesh</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Split or Delete Actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSplitSelectedBay}
+                  className="flex-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1B64F2] border border-blue-200 rounded-lg text-xs font-bold transition-colors text-center"
+                >
+                  + Split Bay (Mullion)
+                </button>
+                {design.panels.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelectedBay}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-xs font-bold transition-colors"
+                  >
+                    Delete Bay
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-xl border border-blue-100 p-3 text-slate-600 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+              <p className="text-[11px] font-medium leading-relaxed">
+                Click any bay on the canvas to configure its sliding/casement type, split with mullions, or edit width.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ========================================================= */}
         {/* 1. GLASS DETAILS & MEASUREMENTS (Per user request)         */}
         {/* ========================================================= */}

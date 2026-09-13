@@ -18,7 +18,8 @@ export type OpeningDirectionType =
   | 'sliding_right'
   | 'casement_left'
   | 'casement_right'
-  | 'tilt_turn';
+  | 'tilt_turn'
+  | 'top_hung';
 
 export interface GlassComponentConfig {
   glassType: GlassTypeName;

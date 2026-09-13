@@ -30,6 +30,7 @@ export type DraggableItemType =
   | 'sash_casement_left'
   | 'sash_casement_right'
   | 'sash_tilt_turn'
+  | 'sash_top_hung'
   | 'sash_fixed'
   | 'mesh_bug';
 
@@ -253,6 +254,18 @@ const PALETTE_ITEMS: PaletteItem[] = [
         <rect x="4" y="3" width="16" height="18" rx="1" />
         <path d="M4 21 L12 3 L20 21" strokeDasharray="1.5 1.5" />
         <path d="M4 3 L20 12 L4 21" strokeDasharray="1 1" className="opacity-60" />
+      </svg>
+    ),
+  },
+  {
+    id: 'sash_top_hung',
+    name: 'Top Hung / Awning',
+    category: 'sashes',
+    description: 'Top-hinged outward awning sash',
+    iconSvg: (
+      <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-current fill-none stroke-[1.8]">
+        <rect x="4" y="3" width="16" height="18" rx="1" />
+        <path d="M4 3 L12 21 L20 3" strokeDasharray="1.5 1.5" />
       </svg>
     ),
   },
