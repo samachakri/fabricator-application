@@ -282,6 +282,90 @@ export function ContextualConfigPanel({
         </div>
 
         {/* ========================================================= */}
+        {/* ARCH HEAD ATTACHMENT SETTINGS (Arch + Window Combination) */}
+        {/* ========================================================= */}
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">
+          <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-100">
+            <span className="font-bold text-slate-900 text-xs flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              Arch Head Configuration
+            </span>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!design.hasArch}
+                onChange={(e) => {
+                  onUpdateDesign({
+                    ...design,
+                    hasArch: e.target.checked,
+                    archType: design.archType || 'round',
+                    archHeight: design.archHeight || 500,
+                    windowType: e.target.checked ? 'Combination Window' : design.windowType,
+                  });
+                }}
+                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
+              />
+              <span className="text-[11px] font-bold text-slate-700">Arch Attached</span>
+            </label>
+          </div>
+
+          {design.hasArch && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                    Arch Style
+                  </label>
+                  <select
+                    value={design.archType || 'round'}
+                    onChange={(e) => updateField('archType', e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800"
+                  >
+                    <option value="round">Semi-Circular Round Arch</option>
+                    <option value="gothic">Gothic Pointed Arch</option>
+                    <option value="segmental">Segmental Low Rise Arch</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-500 font-semibold mb-1">
+                    Arch Rise / Height (mm)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step={10}
+                      min={150}
+                      max={2500}
+                      value={design.archHeight || 500}
+                      onChange={(e) =>
+                        updateField('archHeight', Math.max(150, parseInt(e.target.value) || 500))
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs font-bold text-slate-800"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">
+                      mm
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-between text-xs">
+                <div>
+                  <div className="font-bold text-purple-900">Total Unit Elevation:</div>
+                  <div className="text-[11px] text-purple-700">
+                    Window {design.height || 1200}mm + Arch {design.archHeight || 500}mm
+                  </div>
+                </div>
+                <div className="font-black text-sm text-purple-800 font-mono">
+                  {(design.height || 1200) + (design.archHeight || 500)} mm
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ========================================================= */}
         {/* 2. PROFILE SYSTEM SPECIFICATIONS                          */}
         {/* ========================================================= */}
         <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs">

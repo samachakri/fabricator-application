@@ -54,21 +54,25 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
   const [isEditingHeight, setIsEditingHeight] = useState(false);
   const [tempWidth, setTempWidth] = useState(String(design.width || 1800));
   const [tempHeight, setTempHeight] = useState(String(design.height || 1200));
+  const [isEditingArchHeight, setIsEditingArchHeight] = useState(false);
+  const [tempArchHeight, setTempArchHeight] = useState(String(design.archHeight || 500));
 
   // Determine if canvas has active elements
   const hasElements = design.panels && design.panels.length > 0;
 
   const width = Math.max(400, design.width || 1800);
   const height = Math.max(300, design.height || 1200);
+  const archHeight = design.hasArch ? (design.archHeight || 500) : 0;
+  const totalWindowHeight = height + archHeight;
 
   // Padding around window for engineering dimension lines
   const padX = 190;
   const padY = 170;
   const vbWidth = width + padX * 2;
-  const vbHeight = height + padY * 2 + 100;
+  const vbHeight = totalWindowHeight + padY * 2 + 100;
 
   const winX = padX;
-  const winY = padY;
+  const winY = padY + archHeight; // Rectangular frame starts below the arch!
 
   const frameFace = 60;
   const innerX = winX + frameFace;
@@ -104,6 +108,16 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
     }
   };
 
+  const submitArchHeight = () => {
+    setIsEditingArchHeight(false);
+    const val = Number(tempArchHeight);
+    if (val >= 150 && val <= 2500 && onUpdateDesign) {
+      onUpdateDesign({ ...design, archHeight: val });
+    } else {
+      setTempArchHeight(String(design.archHeight || 500));
+    }
+  };
+
   // Drag and Drop Handler on Canvas
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -120,7 +134,38 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
 
     const updated = { ...design };
 
-    if (itemId === 'shape_rect_1') {
+    if (itemId === 'shape_arch_round' || itemId === 'shape_arch_gothic' || itemId === 'shape_circle') {
+      // Form into Arch + Window Combination (as requested: attaches arch on top of 2-door or existing window)
+      if (!updated.panels || updated.panels.length === 0) {
+        updated.panels = [
+          {
+            id: 'panel-01',
+            name: 'A1',
+            panelType: 'sliding' as const,
+            openingDirection: 'sliding_right' as const,
+            xRatio: 0,
+            widthRatio: 0.5,
+            sashId: 'sash-01',
+            glassId: 'glass-01',
+          },
+          {
+            id: 'panel-02',
+            name: 'A2',
+            panelType: 'sliding' as const,
+            openingDirection: 'sliding_left' as const,
+            xRatio: 0.5,
+            widthRatio: 0.5,
+            sashId: 'sash-02',
+            glassId: 'glass-02',
+          },
+        ];
+      }
+      updated.hasArch = true;
+      updated.archType = itemId === 'shape_arch_gothic' ? 'gothic' : 'round';
+      updated.archHeight = updated.archHeight || 500;
+      updated.windowType = 'Combination Window';
+      onUpdateDesign(updated);
+    } else if (itemId === 'shape_rect_1') {
       updated.panels = [
         {
           id: 'panel-01',
@@ -673,7 +718,8 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
               {/* 3. BLUEPRINT BLUE PRECISION MEASUREMENTS (Matching Image)     */}
               {/* ------------------------------------------------------------- */}
 
-              {/* Overall Height (Left) in Blueprint Blue (#38bdf8) */}
+              {/* Overall Window Height & Arch Dimensions */}
+              {/* Rectangular Door/Window Height */}
               <g>
                 <line
                   x1={winX - 50}
@@ -683,27 +729,22 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                   stroke="#38bdf8"
                   strokeWidth="2"
                 />
-                {/* Top Arrowhead */}
                 <polygon
                   points={`${winX - 54},${winY + 14} ${winX - 50},${winY} ${winX - 46},${winY + 14}`}
                   fill="#38bdf8"
                 />
-                {/* Bottom Arrowhead */}
                 <polygon
                   points={`${winX - 54},${winY + height - 14} ${winX - 50},${winY + height} ${winX - 46},${winY + height - 14}`}
                   fill="#38bdf8"
                 />
-                {/* Top Extension Line */}
                 <line x1={winX - 65} y1={winY} x2={winX} y2={winY} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
-                {/* Bottom Extension Line */}
                 <line x1={winX - 65} y1={winY + height} x2={winX} y2={winY + height} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
 
-                {/* Overall Height Text label: 2843 */}
                 <text
                   x={winX - 70}
                   y={winY + height / 2 + 8}
                   fill="#38bdf8"
-                  fontSize="24"
+                  fontSize="22"
                   fontWeight="900"
                   textAnchor="middle"
                   transform={`rotate(-90 ${winX - 70}, ${winY + height / 2})`}
@@ -713,6 +754,79 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                   {height}
                 </text>
               </g>
+
+              {/* Arch Head Rise Dimension (If Attached on Top) */}
+              {design.hasArch && (
+                <>
+                  <g>
+                    <line
+                      x1={winX - 50}
+                      y1={winY - archHeight}
+                      x2={winX - 50}
+                      y2={winY}
+                      stroke="#a855f7"
+                      strokeWidth="2"
+                    />
+                    <polygon
+                      points={`${winX - 54},${winY - archHeight + 14} ${winX - 50},${winY - archHeight} ${winX - 46},${winY - archHeight + 14}`}
+                      fill="#a855f7"
+                    />
+                    <polygon
+                      points={`${winX - 54},${winY - 14} ${winX - 50},${winY} ${winX - 46},${winY - 14}`}
+                      fill="#a855f7"
+                    />
+                    <line x1={winX - 65} y1={winY - archHeight} x2={winX + width / 2} y2={winY - archHeight} stroke="#a855f7" strokeWidth="1" strokeDasharray="2 2" />
+
+                    <text
+                      x={winX - 70}
+                      y={winY - archHeight / 2 + 8}
+                      fill="#a855f7"
+                      fontSize="20"
+                      fontWeight="900"
+                      textAnchor="middle"
+                      transform={`rotate(-90 ${winX - 70}, ${winY - archHeight / 2})`}
+                      className="cursor-pointer hover:underline"
+                      onClick={() => setIsEditingArchHeight(true)}
+                    >
+                      {archHeight} (Arch)
+                    </text>
+                  </g>
+
+                  {/* Total Combined Height Outer Dimension */}
+                  <g>
+                    <line
+                      x1={winX - 110}
+                      y1={winY - archHeight}
+                      x2={winX - 110}
+                      y2={winY + height}
+                      stroke="#38bdf8"
+                      strokeWidth="2.5"
+                    />
+                    <polygon
+                      points={`${winX - 115},${winY - archHeight + 14} ${winX - 110},${winY - archHeight} ${winX - 105},${winY - archHeight + 14}`}
+                      fill="#38bdf8"
+                    />
+                    <polygon
+                      points={`${winX - 115},${winY + height - 14} ${winX - 110},${winY + height} ${winX - 105},${winY + height - 14}`}
+                      fill="#38bdf8"
+                    />
+                    <line x1={winX - 125} y1={winY - archHeight} x2={winX - 50} y2={winY - archHeight} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
+                    <line x1={winX - 125} y1={winY + height} x2={winX - 50} y2={winY + height} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
+
+                    <text
+                      x={winX - 130}
+                      y={winY + (height - archHeight) / 2 + 8}
+                      fill="#38bdf8"
+                      fontSize="20"
+                      fontWeight="900"
+                      textAnchor="middle"
+                      transform={`rotate(-90 ${winX - 130}, ${winY + (height - archHeight) / 2})`}
+                    >
+                      {height + archHeight} Total
+                    </text>
+                  </g>
+                </>
+              )}
 
               {/* Overall Width (Bottom) in Blueprint Blue (#38bdf8) */}
               <g>
@@ -953,6 +1067,49 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
             </button>
           </div>
         )}
+
+      {/* Direct Arch Height Dimension Edit Modal */}
+      {isEditingArchHeight && (
+        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-purple-500/40 rounded-2xl p-6 w-80 shadow-2xl animate-in zoom-in-95 duration-150">
+            <h4 className="text-sm font-bold text-white mb-1">Edit Arch Rise (Height)</h4>
+            <p className="text-xs text-slate-400 mb-4">
+              Enter top arch rise in millimeters (150 mm – 2500 mm).
+            </p>
+            <div className="relative mb-5">
+              <input
+                type="number"
+                min={150}
+                max={2500}
+                value={tempArchHeight}
+                onChange={(e) => setTempArchHeight(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submitArchHeight()}
+                autoFocus
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-bold text-white font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                mm
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingArchHeight(false)}
+                className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitArchHeight}
+                className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md"
+              >
+                Apply Arch Rise
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* 3. Catalog Templates Modal */}

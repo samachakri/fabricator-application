@@ -80,13 +80,28 @@ export function calculateWindowPrice(
     totalFrameCost += transomsRunningFt * frameRate;
   }
 
-  // 2. Sash Profile Length (for movable panels)
+  // 2. Variables for Glass, Sash, Mesh & Hardware
   let sashRunningFt = 0;
   let totalGlassAreaSqFt = 0;
   let totalGlassCost = 0;
   let totalMeshAreaSqFt = 0;
   let totalMeshCost = 0;
   let totalHardwareCost = 0;
+
+  // Arch Head Profile & Glass (Arch + Window Combination)
+  let archGlassAreaSqFt = 0;
+  if (design.hasArch) {
+    const archH = design.archHeight || 500;
+    const a = W / 2;
+    const b = archH;
+    const arcLengthMm = Math.PI * Math.sqrt((a * a + b * b) / 2);
+    const archRunningFt = mmToRunningFt(arcLengthMm + W);
+    totalFrameCost += archRunningFt * (frameRate * 1.25);
+
+    archGlassAreaSqFt = mm2ToSqFt((Math.PI * a * b) / 2);
+    totalGlassAreaSqFt += archGlassAreaSqFt;
+    totalGlassCost += archGlassAreaSqFt * (design.defaultGlass.ratePerSqFt || 180);
+  }
 
   const innerW = Math.max(200, W - 120);
   const innerH = Math.max(200, H - 120);

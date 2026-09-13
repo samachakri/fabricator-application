@@ -114,6 +114,12 @@ export interface ParametricWindowDesign {
     rate: number;
   };
 
+  // Arch head configuration (Arch + Window combination)
+  hasArch?: boolean;
+  archType?: 'round' | 'gothic' | 'segmental';
+  archHeight?: number; // mm rise of arch on top of window
+  archSpokes?: number; // number of radial mullion spokes
+
   // Additional sections / custom hardware added manually by user
   customSections?: CustomSectionItem[];
 
