@@ -113,6 +113,24 @@ export interface ParametricWindowDesign {
     type: HardwareTypeName;
     rate: number;
   };
+
+  // Additional sections / custom hardware added manually by user
+  customSections?: CustomSectionItem[];
+
+  // Optional manual price overrides
+  manualProfileCost?: number;
+  manualGlassCost?: number;
+  manualHardwareCost?: number;
+  manualMeshCost?: number;
+  manualLabourCost?: number;
+}
+
+export interface CustomSectionItem {
+  id: string;
+  name: string;
+  category?: string;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface WindowPriceEstimate {
@@ -121,6 +139,7 @@ export interface WindowPriceEstimate {
   hardwareCost: number;
   meshCost: number;
   labourCost: number;
+  customSectionsCost?: number;
   totalCost: number;
   totalAreaSqFt: number;
   totalGlassAreaSqFt: number;

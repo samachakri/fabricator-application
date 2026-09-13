@@ -15,13 +15,20 @@ import {
   User,
   Plus,
   Layers,
+  PanelLeftClose,
 } from 'lucide-react';
 
 interface SidebarProps {
   onNewProjectClick?: () => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  onNewProjectClick,
+  isOpen = true,
+  onToggle,
+}) => {
   const pathname = usePathname();
   const { branding } = useBranding();
 
@@ -61,24 +68,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewProjectClick }) => {
     return false;
   };
 
+  if (!isOpen) return null;
+
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between h-screen sticky top-0 select-none z-30">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between h-screen sticky top-0 select-none z-30 transition-all duration-300 shrink-0">
       {/* Brand Header */}
       <div>
-        <div className="px-6 py-6 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#0A2E8A] flex items-center justify-center text-white shadow-sm shadow-blue-900/20">
+        <div className="px-5 py-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-[#0A2E8A] flex items-center justify-center text-white shadow-sm shadow-blue-900/20 shrink-0">
               <Layers className="w-5 h-5 text-blue-100" />
             </div>
             <div>
-              <h1 className="font-bold text-lg tracking-tight text-slate-900 leading-tight">
+              <h1 className="font-bold text-base tracking-tight text-slate-900 leading-tight">
                 Fabricator<span className="text-[#0A2E8A]">Pro</span>
               </h1>
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-slate-400">
+              <p className="text-[9px] uppercase tracking-widest font-semibold text-slate-400">
                 MANUFACTURING SUITE
               </p>
             </div>
           </div>
+          {onToggle && (
+            <button
+              onClick={onToggle}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Collapse Sidebar"
+            >
+              <PanelLeftClose className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Primary Action: + New Project */}

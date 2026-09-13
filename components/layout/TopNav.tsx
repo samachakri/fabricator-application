@@ -1,11 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Bell, HelpCircle, X, ShieldCheck } from 'lucide-react';
+import { Search, Bell, HelpCircle, X, ShieldCheck, PanelLeft } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 
-export const TopNav: React.FC = () => {
+interface TopNavProps {
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+}
+
+export const TopNav: React.FC<TopNavProps> = ({
+  isSidebarOpen = true,
+  onToggleSidebar,
+}) => {
   const { projects } = useStore();
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -22,9 +30,20 @@ export const TopNav: React.FC = () => {
     : [];
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-20">
-      {/* Search Input matching Screenshot 1: "Search quotations, customers, projects..." */}
-      <div className="relative w-96 max-w-md">
+    <header className="h-16 bg-white border-b border-slate-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20">
+      <div className="flex items-center gap-3">
+        {!isSidebarOpen && onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-[#0A2E8A] transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Expand Sidebar"
+          >
+            <PanelLeft className="w-5 h-5" />
+            <span className="text-xs font-bold hidden md:inline">Menu</span>
+          </button>
+        )}
+        {/* Search Input matching Screenshot 1: "Search quotations, customers, projects..." */}
+        <div className="relative w-72 sm:w-96 max-w-md">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -87,6 +106,7 @@ export const TopNav: React.FC = () => {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* Right Icons: Help, Bell, User Profile Pill matching Screenshot */}

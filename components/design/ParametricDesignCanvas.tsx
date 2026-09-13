@@ -113,6 +113,10 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
 
   const applyElementToCanvas = (itemId: string) => {
     if (!onUpdateDesign) return;
+    // Auto-open Details panel on element add
+    if (!isConfigPanelOpen && onToggleConfigPanel) {
+      onToggleConfigPanel();
+    }
 
     const updated = { ...design };
 
@@ -310,65 +314,40 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
       >
         {/* Top Floating Action & Mode Toggle Bar */}
         <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-          {/* Breadcrumb / Status */}
-          <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 shadow-xs pointer-events-auto">
-            <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider">
+          {/* Top Window Name Input for Better Clarity (Screenshot 5) */}
+          <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700 shadow-md pointer-events-auto">
+            <span className="text-xs font-black uppercase text-indigo-400 tracking-wider font-mono">
               {design.id || 'W01'}
             </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-xs font-mono font-bold text-white">
-              {width} × {height} mm
-            </span>
-            {hasElements && (
-              <>
-                <span className="text-slate-500">•</span>
-                <span className="text-xs text-slate-300 font-medium">
-                  {design.panels.length} {design.panels.length === 1 ? 'Panel' : 'Panels'}
-                </span>
-              </>
-            )}
+            <span className="text-slate-600">|</span>
+            <input
+              type="text"
+              value={design.name || ''}
+              placeholder="Window Name (e.g. Master Bedroom, Living Balcony)..."
+              onChange={(e) => {
+                if (onUpdateDesign) {
+                  onUpdateDesign({ ...design, name: e.target.value });
+                }
+              }}
+              className="bg-transparent text-xs font-semibold text-white placeholder-slate-500 focus:outline-none w-48 sm:w-72"
+            />
           </div>
 
-          {/* Right Mode Switchers & Sidebar Toggle */}
-          <div className="flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xs pointer-events-auto">
+          {/* Right Mode Switchers & Details Toggle */}
+          <div className="flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-md pointer-events-auto">
             {hasElements && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('2d')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    viewMode === '2d'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <Ruler className="w-3.5 h-3.5" />
-                  <span>2D CAD</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('3d')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    viewMode === '3d'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <Box className="w-3.5 h-3.5" />
-                  <span>3D View</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsSheetOpen(true)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
-                  title="Open Full Architectural CAD Production Sheet"
-                >
-                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>CAD Sheet</span>
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === '3d' ? '2d' : '3d')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  viewMode === '3d'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Box className="w-3.5 h-3.5" />
+                <span>{viewMode === '3d' ? '2D View' : '3D View'}</span>
+              </button>
             )}
 
             <button
@@ -392,7 +371,7 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
               </button>
             )}
 
-            {/* Sidebar Toggle for Right Options Panel */}
+            {/* Sidebar Toggle for Right Details Panel (Screenshot 4) */}
             {onToggleConfigPanel && (
               <>
                 <div className="w-px h-4 bg-slate-700 mx-0.5" />
@@ -404,14 +383,14 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                   }`}
-                  title={isConfigPanelOpen ? 'Hide Design Options Panel' : 'Show Design Options Panel'}
+                  title={isConfigPanelOpen ? 'Hide Details' : 'Show Details'}
                 >
                   {isConfigPanelOpen ? (
                     <PanelRightClose className="w-4 h-4" />
                   ) : (
                     <PanelRight className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">Design Options</span>
+                  <span className="hidden sm:inline">Details</span>
                 </button>
               </>
             )}
@@ -419,38 +398,101 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
         </div>
 
         {/* ------------------------------------------------------------- */}
-        {/* IF CANVAS HAS NO ELEMENTS YET: CLEAN BLANK CAD DROP ZONE     */}
+        {/* IF CANVAS HAS NO ELEMENTS YET: CLEAN BLANK CAD PLAN ONLY      */}
         {/* ------------------------------------------------------------- */}
         {!hasElements ? (
-          <div className="w-full max-w-xl p-10 border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-3xl bg-slate-900/50 flex flex-col items-center justify-center text-center transition-all group">
-            <div className="w-20 h-20 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-              <Layers className="w-10 h-10" />
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Window Design Canvas
-            </h3>
-            <p className="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed">
-              Drag and drop any frame, opening, or division from the Shape Library to start designing, or browse pre-engineered catalog templates.
-            </p>
+          <div className="w-full h-full flex flex-col items-center justify-center relative p-8">
+            <svg
+              viewBox={`0 0 ${vbWidth} ${vbHeight}`}
+              className="max-w-full max-h-[85vh] transition-transform duration-200 drop-shadow-2xl select-none"
+              style={{ transform: `scale(${zoomLevel / 100})` }}
+            >
+              <defs>
+                <pattern id="emptyCadGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="0.8" opacity="0.4" />
+                </pattern>
+              </defs>
+              <rect width={vbWidth} height={vbHeight} fill="url(#emptyCadGrid)" />
 
-            <div className="flex items-center gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => applyElementToCanvas('shape_rect_2')}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-2"
+              {/* Blank Window Blueprint Plan Area */}
+              <rect
+                x={winX}
+                y={winY}
+                width={width}
+                height={height}
+                fill="#0b1329"
+                stroke="#38bdf8"
+                strokeWidth="2"
+                strokeDasharray="8 6"
+                rx="8"
+                opacity="0.85"
+              />
+
+              {/* Center Crosshairs */}
+              <line
+                x1={winX + width / 2 - 40}
+                y1={winY + height / 2}
+                x2={winX + width / 2 + 40}
+                y2={winY + height / 2}
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+                opacity="0.4"
+              />
+              <line
+                x1={winX + width / 2}
+                y1={winY + height / 2 - 40}
+                x2={winX + width / 2}
+                y2={winY + height / 2 + 40}
+                stroke="#38bdf8"
+                strokeWidth="1.5"
+                opacity="0.4"
+              />
+
+              {/* Top Width Dimension Line */}
+              <line x1={winX} y1={winY - 45} x2={winX + width} y2={winY - 45} stroke="#38bdf8" strokeWidth="2" />
+              <line x1={winX} y1={winY - 55} x2={winX} y2={winY - 35} stroke="#38bdf8" strokeWidth="2" />
+              <line x1={winX + width} y1={winY - 55} x2={winX + width} y2={winY - 35} stroke="#38bdf8" strokeWidth="2" />
+              <text
+                x={winX + width / 2}
+                y={winY - 55}
+                textAnchor="middle"
+                fill="#38bdf8"
+                fontSize="18"
+                fontFamily="monospace"
+                fontWeight="bold"
               >
-                <Box className="w-4 h-4" />
-                <span>Add 2-Panel Opening</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCatalogOpen(true)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all flex items-center gap-2"
+                {width} mm
+              </text>
+
+              {/* Left Height Dimension Line */}
+              <line x1={winX - 45} y1={winY} x2={winX - 45} y2={winY + height} stroke="#38bdf8" strokeWidth="2" />
+              <line x1={winX - 55} y1={winY} x2={winX - 35} y2={winY} stroke="#38bdf8" strokeWidth="2" />
+              <line x1={winX - 55} y1={winY + height} x2={winX - 35} y2={winY + height} stroke="#38bdf8" strokeWidth="2" />
+              <text
+                x={winX - 55}
+                y={winY + height / 2}
+                textAnchor="middle"
+                fill="#38bdf8"
+                fontSize="18"
+                fontFamily="monospace"
+                fontWeight="bold"
+                transform={`rotate(-90 ${winX - 55} ${winY + height / 2})`}
               >
-                <FolderOpen className="w-4 h-4" />
-                <span>Browse Catalog</span>
-              </button>
-            </div>
+                {height} mm
+              </text>
+
+              <text
+                x={winX + width / 2}
+                y={winY + height / 2 + 50}
+                textAnchor="middle"
+                fill="#94a3b8"
+                fontSize="15"
+                fontFamily="sans-serif"
+                fontWeight="600"
+              >
+                Drag shapes from left palette here to design window
+              </text>
+            </svg>
           </div>
         ) : viewMode === '3d' ? (
           /* 3D WebGL Engine */
@@ -570,7 +612,7 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                     {/* Panel Identifier Tag (A1, A2, A3, A4) */}
                     <circle
                       cx={pX + pW / 2}
-                      cy={pY + innerH / 2}
+                      cy={pY + innerH / 2 - 15}
                       r="16"
                       fill="#0f172a"
                       stroke="#38bdf8"
@@ -579,13 +621,37 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                     />
                     <text
                       x={pX + pW / 2}
-                      y={pY + innerH / 2 + 5}
+                      y={pY + innerH / 2 - 10}
                       fill="#38bdf8"
                       fontSize="14"
                       fontWeight="bold"
                       textAnchor="middle"
                     >
                       {pTag}
+                    </text>
+
+                    {/* Live Glass Cut Measurements & Spec (Directly from Details) */}
+                    <text
+                      x={pX + pW / 2}
+                      y={pY + innerH / 2 + 18}
+                      fill="#38bdf8"
+                      fontSize="12"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {Math.max(50, Math.round(pW - 30))} × {Math.max(50, Math.round(innerH - 30))} mm
+                    </text>
+                    <text
+                      x={pX + pW / 2}
+                      y={pY + innerH / 2 + 34}
+                      fill="#94a3b8"
+                      fontSize="10"
+                      fontFamily="sans-serif"
+                      fontWeight="500"
+                      textAnchor="middle"
+                    >
+                      {design.defaultGlass.thickness}mm {design.defaultGlass.glassType}
                     </text>
 
                     {/* Hardware Handles on Meeting Stiles */}

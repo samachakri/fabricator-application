@@ -128,19 +128,35 @@ export function calculateWindowPrice(
   const totalProfileCost = Math.round(totalFrameCost + totalSashCost);
   const totalProfileLengthFt = parseFloat((frameRunningFt + mullionsRunningFt + transomsRunningFt + sashRunningFt).toFixed(2));
 
-  // Round values
-  const profileCostRounded = totalProfileCost;
-  const glassCostRounded = Math.round(totalGlassCost);
-  const hardwareCostRounded = Math.round(totalHardwareCost);
-  const meshCostRounded = Math.round(totalMeshCost);
-  const labourCostRounded = Math.round(design.labourCostPerWindow || 1200);
+  // Round values or use manual overrides
+  const profileCostRounded =
+    design.manualProfileCost !== undefined ? design.manualProfileCost : totalProfileCost;
+  const glassCostRounded =
+    design.manualGlassCost !== undefined ? design.manualGlassCost : Math.round(totalGlassCost);
+  const hardwareCostRounded =
+    design.manualHardwareCost !== undefined
+      ? design.manualHardwareCost
+      : Math.round(totalHardwareCost);
+  const meshCostRounded =
+    design.manualMeshCost !== undefined ? design.manualMeshCost : Math.round(totalMeshCost);
+  const labourCostRounded =
+    design.manualLabourCost !== undefined
+      ? design.manualLabourCost
+      : Math.round(design.labourCostPerWindow || 1200);
+
+  // Custom sections added manually by user
+  const customSectionsCost = (design.customSections || []).reduce(
+    (sum, item) => sum + (item.quantity * item.unitPrice),
+    0
+  );
 
   const singleWindowTotal =
     profileCostRounded +
     glassCostRounded +
     hardwareCostRounded +
     meshCostRounded +
-    labourCostRounded;
+    labourCostRounded +
+    customSectionsCost;
 
   const totalCost = singleWindowTotal * qty;
 
@@ -150,6 +166,7 @@ export function calculateWindowPrice(
     hardwareCost: hardwareCostRounded * qty,
     meshCost: meshCostRounded * qty,
     labourCost: labourCostRounded * qty,
+    customSectionsCost: customSectionsCost * qty,
     totalCost,
     totalAreaSqFt: parseFloat((totalAreaSqFt * qty).toFixed(2)),
     totalGlassAreaSqFt: parseFloat((totalGlassAreaSqFt * qty).toFixed(2)),

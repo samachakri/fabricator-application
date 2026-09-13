@@ -14,6 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
     <html lang="en">
@@ -27,14 +28,21 @@ export default function RootLayout({
       <body className="bg-slate-50 text-slate-900 min-h-screen">
         <BrandingProvider>
           <StoreProvider>
-            <div className="flex min-h-screen">
+            <div className="flex min-h-screen overflow-x-hidden">
               {/* Left Sidebar */}
-              <Sidebar onNewProjectClick={() => setIsNewProjectModalOpen(true)} />
+              <Sidebar
+                isOpen={isSidebarOpen}
+                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                onNewProjectClick={() => setIsNewProjectModalOpen(true)}
+              />
 
               {/* Main Content Area */}
               <div className="flex-1 flex flex-col min-w-0">
-                <TopNav />
-                <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+                <TopNav
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">{children}</main>
               </div>
             </div>
 

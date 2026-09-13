@@ -115,14 +115,14 @@ export const DesignHeader: React.FC<DesignHeaderProps> = ({
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
-              title={isConfigPanelOpen ? 'Hide Design Options Panel' : 'Show Design Options Panel'}
+              title={isConfigPanelOpen ? 'Hide Details' : 'Show Details'}
             >
               {isConfigPanelOpen ? (
                 <PanelRightClose className="w-4 h-4" />
               ) : (
                 <PanelRight className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">Design Options</span>
+              <span className="hidden sm:inline">Details</span>
             </button>
           </>
         )}
