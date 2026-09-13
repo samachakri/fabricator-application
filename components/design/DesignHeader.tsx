@@ -6,46 +6,42 @@ import {
   Undo2,
   Redo2,
   Save,
-  ChevronDown,
   Layers,
-  ArrowLeft,
   Check,
+  PanelRight,
+  PanelRightClose,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface DesignHeaderProps {
-  projectName: string;
-  windowId: string;
-  allWindowIds: string[];
-  onSelectWindow: (id: string) => void;
+  projectName?: string;
+  windowId?: string;
+  allWindowIds?: string[];
+  onSelectWindow?: (id: string) => void;
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
   onSave: () => void;
   isSaved: boolean;
-  onOpenWelcome?: () => void;
-  onOpenMultipleCopies?: () => void;
+  isConfigPanelOpen?: boolean;
+  onToggleConfigPanel?: () => void;
 }
 
 export const DesignHeader: React.FC<DesignHeaderProps> = ({
-  projectName,
-  windowId,
-  allWindowIds,
-  onSelectWindow,
   canUndo,
   canRedo,
   onUndo,
   onRedo,
   onSave,
   isSaved,
-  onOpenWelcome,
-  onOpenMultipleCopies,
+  isConfigPanelOpen = false,
+  onToggleConfigPanel,
 }) => {
   return (
     <header className="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between select-none z-30 shrink-0">
-      {/* Left: Design Logo + Project + Window Selector */}
-      <div className="flex items-center gap-4">
-        {/* Design Brand Mark */}
+      {/* Left: Design Logo & Back Link */}
+      <div className="flex items-center gap-3">
         <Link
           href="/design"
           className="flex items-center gap-2 group"
@@ -55,60 +51,13 @@ export const DesignHeader: React.FC<DesignHeaderProps> = ({
             <Layers className="w-4 h-4" />
           </div>
           <span className="font-extrabold text-base text-slate-900 tracking-tight">
-            Design
+            Design Studio
           </span>
         </Link>
-
-        <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
-        {/* Project Selector */}
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
-          <span className="text-slate-400 font-medium">Project:</span>
-          <span className="font-bold text-slate-800">{projectName || 'Villa - Hyderabad'}</span>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
-        </div>
-
-        {/* Window Selector Dropdown */}
-        <div className="relative flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition-colors">
-          <span className="text-slate-400 font-medium">Window:</span>
-          <select
-            value={windowId}
-            onChange={(e) => onSelectWindow(e.target.value)}
-            className="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer pr-1"
-          >
-            {allWindowIds.map((id) => (
-              <option key={id} value={id}>
-                {id}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
-      {/* Center / Right: Undo, Redo, Save */}
+      {/* Right: Undo, Redo, Save, and Sidebar Toggle for Config Panel */}
       <div className="flex items-center gap-2">
-        {onOpenWelcome && (
-          <button
-            type="button"
-            onClick={onOpenWelcome}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors"
-            title="Set Default Glass & Finish"
-          >
-            <span>Set Default</span>
-          </button>
-        )}
-
-        {onOpenMultipleCopies && (
-          <button
-            type="button"
-            onClick={onOpenMultipleCopies}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
-            title="Replicate window across multiple openings"
-          >
-            <span>Multiple Copies</span>
-          </button>
-        )}
-
         {/* Undo Button */}
         <button
           type="button"
@@ -153,6 +102,30 @@ export const DesignHeader: React.FC<DesignHeaderProps> = ({
             </>
           )}
         </button>
+
+        {/* Sidebar Toggle for Right Configuration Panel */}
+        {onToggleConfigPanel && (
+          <>
+            <div className="h-4 w-px bg-slate-200 mx-1" />
+            <button
+              type="button"
+              onClick={onToggleConfigPanel}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isConfigPanelOpen
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+              title={isConfigPanelOpen ? 'Hide Design Options Panel' : 'Show Design Options Panel'}
+            >
+              {isConfigPanelOpen ? (
+                <PanelRightClose className="w-4 h-4" />
+              ) : (
+                <PanelRight className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">Design Options</span>
+            </button>
+          </>
+        )}
       </div>
     </header>
   );

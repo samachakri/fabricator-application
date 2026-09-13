@@ -37,18 +37,13 @@ export const DesignWindowTabs: React.FC<DesignWindowTabsProps> = ({
                 : 'bg-transparent border-transparent hover:bg-slate-100/80 text-slate-600'
             }`}
           >
-            <div className="flex flex-col items-start leading-tight">
-              <span
-                className={`text-xs font-black tracking-tight ${
-                  isActive ? 'text-slate-900' : 'text-slate-700'
-                }`}
-              >
-                {tab.id}
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium truncate max-w-[110px]">
-                {tab.name || 'Room'}
-              </span>
-            </div>
+            <span
+              className={`text-xs font-black tracking-tight ${
+                isActive ? 'text-slate-900' : 'text-slate-600'
+              }`}
+            >
+              {tab.id}
+            </span>
 
             {/* Delete option for individual window tab (shown when more than 1 window exists) */}
             {tabs.length > 1 && onDeleteTab && (

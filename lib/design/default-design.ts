@@ -123,6 +123,57 @@ export function createDefaultWindowDesign(
   };
 }
 
+// Create blank parametric window design ready for drag-and-drop
+export function createBlankWindowDesign(
+  windowId: string = 'W01',
+  name: string = 'W01',
+  projectId: string = 'PRJ-1042'
+): ParametricWindowDesign {
+  const defaultGlass: GlassComponentConfig = {
+    glassType: 'Toughened',
+    thickness: 5,
+    color: 'Clear',
+    ratePerSqFt: 180,
+  };
+
+  return {
+    id: windowId,
+    name,
+    projectId,
+    windowType: 'Sliding Window',
+    width: 1800,
+    height: 1200,
+    quantity: 1,
+    unit: 'MM',
+
+    profileBrand: 'VEKA',
+    profileSystem: '60 mm',
+    profileSeries: 'Sliding Series',
+    profileColor: 'Clear',
+
+    frameRatePerFt: 250,
+    sashRatePerFt: 220,
+    labourCostPerWindow: 1200,
+
+    panels: [],
+    mullions: [],
+    transoms: [],
+
+    glassConfigs: {},
+    sashConfigs: {},
+
+    defaultGlass,
+    defaultMesh: {
+      type: 'Fiberglass',
+      ratePerSqFt: 60,
+    },
+    defaultHardware: {
+      type: 'Standard Sliding Set',
+      rate: 450,
+    },
+  };
+}
+
 // Convert legacy WindowDesign from store to ParametricWindowDesign
 export function convertToParametricDesign(
   legacy: WindowDesign,
@@ -132,7 +183,7 @@ export function convertToParametricDesign(
   if (legacy.notes && legacy.notes.startsWith('PARAMETRIC_JSON:')) {
     try {
       const parsed = JSON.parse(legacy.notes.replace('PARAMETRIC_JSON:', ''));
-      if (parsed && parsed.panels && parsed.panels.length > 0) {
+      if (parsed && Array.isArray(parsed.panels)) {
         return parsed;
       }
     } catch (e) {
@@ -140,8 +191,8 @@ export function convertToParametricDesign(
     }
   }
 
-  // Otherwise construct a parametric design based on legacy dimensions & type
-  const base = createDefaultWindowDesign(legacy.id, legacy.name, projectId);
+  // Otherwise construct a blank design ready for drag-and-drop
+  const base = createBlankWindowDesign(legacy.id, legacy.name || legacy.id, projectId);
   base.width = legacy.width || 1800;
   base.height = legacy.height || 1200;
   base.quantity = legacy.quantity || 1;
@@ -192,7 +243,7 @@ export function convertToStoreWindowDesign(
 
   return {
     id: param.id,
-    name: `Window ${param.id} (${param.name || 'Sliding'})`,
+    name: param.id,
     width: param.width,
     height: param.height,
     quantity: param.quantity,

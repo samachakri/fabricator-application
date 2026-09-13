@@ -346,58 +346,6 @@ export const DraggableShapePalette: React.FC<DraggableShapePaletteProps> = ({
         </button>
       </div>
 
-      {/* Top CAD Tool Icons (Pointer, Box, Arch, Ruler, Catalog) */}
-      <div className="p-1.5 border-b border-slate-200 flex items-center justify-around bg-white">
-        <button
-          type="button"
-          onClick={() => onSelectTool && onSelectTool('select')}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-            activeTool === 'select'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-          title="Select / Move Tool"
-        >
-          <MousePointer className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelectTool && onSelectTool('rect')}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-            activeTool === 'rect'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-          title="Rectangle Outer Frame"
-        >
-          <Square className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelectTool && onSelectTool('arch')}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-            activeTool === 'arch'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-          title="Arch / Curved Geometry"
-        >
-          <Circle className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onSelectTool && onSelectTool('dimension')}
-          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-            activeTool === 'dimension'
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-          title="Precision Dimensioning"
-        >
-          <Ruler className="w-4 h-4" />
-        </button>
-      </div>
-
       {/* Category Pills (When expanded) */}
       {!isCollapsed && (
         <div className="p-1.5 border-b border-slate-100 flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px] font-bold">

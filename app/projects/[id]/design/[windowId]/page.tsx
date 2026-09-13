@@ -61,12 +61,14 @@ export default function WindowDesignerPage() {
   // Modal dialog states
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [isMultipleCopiesOpen, setIsMultipleCopiesOpen] = useState(false);
+  // Collapsible configuration panel state (closed by default as requested)
+  const [showConfigPanel, setShowConfigPanel] = useState<boolean>(false);
 
   // Initialize or update parametric design when project or window changes
   useEffect(() => {
     if (project && !rawWindow) {
       const created = addWindow(projectId, {
-        name: 'Window 01 (Living Room)',
+        name: 'W01',
         type: 'sliding_3track',
         width: 1800,
         height: 1200,
@@ -81,7 +83,7 @@ export default function WindowDesignerPage() {
       const parsed = convertToParametricDesign(rawWindow, projectId);
       // Ensure window id matches route
       parsed.id = rawWindow.id;
-      parsed.name = rawWindow.name?.replace(/Window \w+ \((.*)\)/, '$1') || 'Living Room';
+      parsed.name = rawWindow.name || rawWindow.id;
       setDesign(parsed);
       setHistory([parsed]);
       setHistoryIndex(0);
@@ -268,10 +270,11 @@ export default function WindowDesignerPage() {
     const nextIndex = project.windows.length + 1;
     const windowTag = `W0${nextIndex}`;
     const newWin = addWindow(projectId, {
-      name: `Window 0${nextIndex} (Bedroom ${nextIndex})`,
-      type: 'sliding_3track',
+      name: windowTag,
+      type: 'sliding_2track',
       width: 1800,
       height: 1200,
+      notes: '',
     });
     if (newWin) {
       router.push(`/projects/${projectId}/design/${newWin.id}`);
@@ -303,7 +306,7 @@ export default function WindowDesignerPage() {
 
     copies.forEach((copy) => {
       const created = addWindow(projectId, {
-        name: `Window ${copy.tag} (${copy.room})`,
+        name: copy.tag,
         type: (rawWindow?.type || 'sliding_3track') as any,
         width: copy.width,
         height: copy.height,
@@ -350,12 +353,12 @@ export default function WindowDesignerPage() {
   const allWindowIds = project.windows.map((w) => w.id);
   const tabItems = project.windows.map((w) => ({
     id: w.id,
-    name: w.name?.replace(/Window \w+ \((.*)\)/, '$1') || 'Room',
+    name: w.id,
   }));
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] min-h-[680px] bg-slate-100 overflow-hidden font-sans">
-      {/* 1. Header (50-60px): Project name, Window ID dropdown, Undo/Redo, Save */}
+      {/* 1. Header (50-60px): Project name, Undo/Redo, Save, Sidebar toggle */}
       <DesignHeader
         projectName={project.name}
         windowId={design.id}
@@ -367,11 +370,11 @@ export default function WindowDesignerPage() {
         onRedo={handleRedo}
         onSave={handleSaveDesign}
         isSaved={isSaved}
-        onOpenWelcome={() => setIsWelcomeModalOpen(true)}
-        onOpenMultipleCopies={() => setIsMultipleCopiesOpen(true)}
+        isConfigPanelOpen={showConfigPanel}
+        onToggleConfigPanel={() => setShowConfigPanel(!showConfigPanel)}
       />
 
-      {/* 2. Window Switcher Tabs: W01 Living Room, W02 Bedroom, etc. */}
+      {/* 2. Window Switcher Tabs: W01, W02, W03, etc. */}
       <DesignWindowTabs
         tabs={tabItems}
         activeWindowId={design.id}
@@ -380,10 +383,14 @@ export default function WindowDesignerPage() {
         onDeleteTab={handleDeleteWindow}
       />
 
-      {/* 3. Main Workspace: LEFT 60% SVG Technical Drawing / RIGHT 40% Contextual Config & Pricing */}
+      {/* 3. Main Workspace: LEFT Canvas (Full width or 60%) / RIGHT Collapsible Config Panel */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left: 60% Parametric SVG Canvas */}
-        <div className="w-full lg:w-[60%] h-full relative overflow-hidden bg-white border-r border-slate-200 flex flex-col">
+        {/* Left: Parametric CAD Canvas */}
+        <div
+          className={`w-full ${
+            showConfigPanel ? 'lg:w-[60%]' : 'lg:w-full'
+          } h-full relative overflow-hidden bg-[#090D16] flex flex-col transition-all duration-200`}
+        >
           <ParametricDesignCanvas
             design={design}
             selectedComponentId={selectedComponent?.id || null}
@@ -406,21 +413,25 @@ export default function WindowDesignerPage() {
               });
             }}
             onUpdateDesign={(updated) => handleUpdateDesign(updated)}
+            isConfigPanelOpen={showConfigPanel}
+            onToggleConfigPanel={() => setShowConfigPanel(!showConfigPanel)}
           />
         </div>
 
-        {/* Right: 40% Contextual Configuration & Pricing Panel */}
-        <div className="w-full lg:w-[40%] h-full overflow-hidden flex flex-col">
-          <ContextualConfigPanel
-            design={design}
-            selectedComponent={selectedComponent}
-            onSelectComponent={(comp) => setSelectedComponent(comp)}
-            onUpdateDesign={(updated) => handleUpdateDesign(updated)}
-            onSaveDesign={handleSaveDesign}
-            onContinueToQuotation={handleContinueToQuotation}
-            isSaving={isSaving}
-          />
-        </div>
+        {/* Right: Collapsible Contextual Configuration & Pricing Panel */}
+        {showConfigPanel && (
+          <div className="w-full lg:w-[40%] h-full overflow-hidden flex flex-col border-l border-slate-700 bg-white transition-all duration-200 shadow-2xl z-20">
+            <ContextualConfigPanel
+              design={design}
+              selectedComponent={selectedComponent}
+              onSelectComponent={(comp) => setSelectedComponent(comp)}
+              onUpdateDesign={(updated) => handleUpdateDesign(updated)}
+              onSaveDesign={handleSaveDesign}
+              onContinueToQuotation={handleContinueToQuotation}
+              isSaving={isSaving}
+            />
+          </div>
+        )}
       </div>
 
       {/* 4. Welcome Setup Modal */}
