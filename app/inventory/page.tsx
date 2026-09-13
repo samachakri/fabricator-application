@@ -403,8 +403,8 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
       {/* Breadcrumb & Top Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
             <span>HOME</span>
             <ChevronRight className="w-3 h-3 text-slate-400" />
@@ -427,14 +427,14 @@ export default function InventoryPage() {
           </p>
         </div>
 
-        {/* Action Buttons (Export, Adjustments, + Add Inventory Item) */}
-        <div className="flex items-center flex-wrap gap-2.5">
+        {/* Action Buttons (Export, Adjustments, Manage Brands, Add Inventory Item) */}
+        <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 sm:gap-2.5 shrink-0 justify-start lg:justify-end">
           <button
             onClick={handleExportCSV}
             title="Download CSV Report"
-            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl shadow-sm transition-all flex items-center gap-2"
+            className="h-9 px-3 sm:px-3.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl shadow-xs transition-all flex items-center gap-2 whitespace-nowrap"
           >
-            <Download className="w-4 h-4 text-slate-500" />
+            <Download className="w-4 h-4 text-slate-500 shrink-0" />
             <span>Export Stock Report</span>
           </button>
 
@@ -444,27 +444,27 @@ export default function InventoryPage() {
               setIsMovementModalOpen(true);
             }}
             title="Stock In / Out Movement"
-            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl shadow-sm transition-all flex items-center gap-2"
+            className="h-9 px-3 sm:px-3.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400 rounded-xl shadow-xs transition-all flex items-center gap-2 whitespace-nowrap"
           >
-            <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+            <SlidersHorizontal className="w-4 h-4 text-slate-500 shrink-0" />
             <span>Stock Adjustments</span>
           </button>
 
           <button
             onClick={() => setIsBrandsDrawerOpen(true)}
             title="Manage, edit & add brand names"
-            className="px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-xs transition-all flex items-center gap-2"
+            className="h-9 px-3 sm:px-3.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl shadow-xs transition-all flex items-center gap-2 whitespace-nowrap"
           >
-            <Tag className="w-4 h-4 text-indigo-600" />
+            <Tag className="w-4 h-4 text-indigo-600 shrink-0" />
             <span>Manage Brands</span>
           </button>
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2 transition-all"
+            className="h-9 px-3.5 sm:px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-200 flex items-center gap-2 transition-all whitespace-nowrap border border-transparent"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ Add Inventory Item</span>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span>Add Inventory Item</span>
           </button>
         </div>
       </div>
