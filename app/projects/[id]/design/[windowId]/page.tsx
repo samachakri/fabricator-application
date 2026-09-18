@@ -49,8 +49,8 @@ export default function WindowDesignerPage() {
     id: string;
     subId?: string;
   } | null>({
-    type: 'glass',
-    id: 'glass-02',
+    type: 'frame',
+    id: 'frame-outer',
   });
 
   // Save status indicator
@@ -61,8 +61,8 @@ export default function WindowDesignerPage() {
   // Modal dialog states
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [isMultipleCopiesOpen, setIsMultipleCopiesOpen] = useState(false);
-  // Collapsible configuration panel state (closed by default as requested)
-  const [showConfigPanel, setShowConfigPanel] = useState<boolean>(false);
+  // Configuration panel state (open by default: Left 60% Canvas / Right 40% Config Panel)
+  const [showConfigPanel, setShowConfigPanel] = useState<boolean>(true);
 
   // Initialize or update parametric design when project or window changes
   useEffect(() => {

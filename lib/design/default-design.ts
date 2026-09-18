@@ -19,7 +19,7 @@ export function createDefaultWindowDesign(
     ratePerSqFt: 180,
   };
 
-  const sash2Config: SashComponentConfig = {
+  const sash1Config: SashComponentConfig = {
     openingDirection: 'sliding_right',
     hasMesh: false,
     meshType: 'Fiberglass',
@@ -29,7 +29,7 @@ export function createDefaultWindowDesign(
     hardwareRate: 450,
   };
 
-  const sash3Config: SashComponentConfig = {
+  const sash2Config: SashComponentConfig = {
     openingDirection: 'sliding_left',
     hasMesh: true,
     meshType: 'Fiberglass',
@@ -45,70 +45,59 @@ export function createDefaultWindowDesign(
     projectId,
     windowType: 'Sliding Window',
     width: 1800,
-    height: 1200,
+    height: 1500,
     quantity: 1,
     unit: 'MM',
 
     profileBrand: 'VEKA',
     profileSystem: '60 mm',
     profileSeries: 'Sliding Series',
-    profileColor: 'Clear',
+    profileColor: 'Pure White',
 
     frameRatePerFt: 250,
     sashRatePerFt: 220,
     labourCostPerWindow: 1200,
 
-    // 3 panels: Fixed | Sliding -> | Sliding <-
+    // 2 sliding panels: Sliding Right -> | Sliding Left <- with center meeting rail
     panels: [
       {
         id: 'panel-01',
-        name: 'Left Panel (Fixed)',
-        panelType: 'fixed',
-        openingDirection: 'fixed',
+        name: 'Panel 01',
+        panelType: 'sliding',
+        openingDirection: 'sliding_right',
         xRatio: 0,
-        widthRatio: 1 / 3,
+        widthRatio: 0.5,
+        sashId: 'sash-01',
         glassId: 'glass-01',
+        hardwareId: 'hardware-01',
       },
       {
         id: 'panel-02',
-        name: 'Center Panel (Sliding)',
-        panelType: 'sliding',
-        openingDirection: 'sliding_right',
-        xRatio: 1 / 3,
-        widthRatio: 1 / 3,
-        sashId: 'sash-02',
-        glassId: 'glass-02',
-        hardwareId: 'hardware-02',
-      },
-      {
-        id: 'panel-03',
-        name: 'Right Panel (Sliding)',
+        name: 'Panel 02',
         panelType: 'sliding',
         openingDirection: 'sliding_left',
-        xRatio: 2 / 3,
-        widthRatio: 1 / 3,
-        sashId: 'sash-03',
-        glassId: 'glass-03',
-        meshId: 'mesh-03',
-        hardwareId: 'hardware-03',
+        xRatio: 0.5,
+        widthRatio: 0.5,
+        sashId: 'sash-02',
+        glassId: 'glass-02',
+        meshId: 'mesh-02',
+        hardwareId: 'hardware-02',
       },
     ],
 
     mullions: [
-      { id: 'mullion-01', positionRatio: 1 / 3, width: 60 },
-      { id: 'mullion-02', positionRatio: 2 / 3, width: 60 },
+      { id: 'mullion-01', positionRatio: 0.5, width: 60 },
     ],
     transoms: [],
 
     glassConfigs: {
       'glass-01': { ...defaultGlass },
       'glass-02': { ...defaultGlass },
-      'glass-03': { ...defaultGlass },
     },
 
     sashConfigs: {
+      'sash-01': sash1Config,
       'sash-02': sash2Config,
-      'sash-03': sash3Config,
     },
 
     defaultGlass,
@@ -191,10 +180,10 @@ export function convertToParametricDesign(
     }
   }
 
-  // Otherwise construct a blank design ready for drag-and-drop
-  const base = createBlankWindowDesign(legacy.id, legacy.name || legacy.id, projectId);
+  // Otherwise construct a default 2-panel sliding design (1800 x 1500)
+  const base = createDefaultWindowDesign(legacy.id, legacy.name || legacy.id, projectId);
   base.width = legacy.width || 1800;
-  base.height = legacy.height || 1200;
+  base.height = legacy.height || 1500;
   base.quantity = legacy.quantity || 1;
   base.profileBrand = (legacy.profileBrand as any) || 'VEKA';
 

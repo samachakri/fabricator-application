@@ -14,6 +14,7 @@ import { DraggableShapePalette, PaletteItem } from './DraggableShapePalette';
 import { Precision3DView } from './Precision3DView';
 import { DesignCatalogModal, CatalogTemplate } from './DesignCatalogModal';
 import { ArchitecturalSheetModal } from './ArchitecturalSheetModal';
+import { WindoorQuoteModal } from './WindoorQuoteModal';
 import {
   ZoomIn,
   ZoomOut,
@@ -62,9 +63,11 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isQuoteOpen, setIsQuoteOpen] = useState(false);
 
   // Drag over target cell tracking
   const [hoveredCellId, setHoveredCellId] = useState<string | null>(null);
+  const [isDraggingOverTop, setIsDraggingOverTop] = useState(false);
 
   // Inline / Modal Dimension Editing States
   const [isEditingWidth, setIsEditingWidth] = useState(false);
@@ -84,16 +87,18 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
   const [tempRowHeight, setTempRowHeight] = useState<string>('');
 
   // Overall Dimensions
+  const panels = design.panels || [];
+  const isStandaloneArch = Boolean(design.hasArch && (panels.length === 0 || (design.height || 0) === 0));
   const width = Math.max(400, design.width || 1800);
-  const height = Math.max(300, design.height || 1200);
-  const archHeight = design.hasArch ? (design.archHeight || 500) : 0;
-  const totalWindowHeight = height + archHeight;
+  const archHeight = design.hasArch ? (design.archHeight || 600) : 0;
+  const height = isStandaloneArch ? 0 : Math.max(300, design.height || 1200);
+  const totalWindowHeight = isStandaloneArch ? archHeight + 260 : height + archHeight;
 
   // CAD Canvas ViewBox Dimensions with padding for precision dimension lines
   const padX = 180;
   const padY = 160;
   const vbWidth = width + padX * 2;
-  const vbHeight = totalWindowHeight + padY * 2 + 30;
+  const vbHeight = totalWindowHeight + padY * 2 + 40;
 
   const winX = padX;
   const winY = padY + archHeight; // Rectangular base starts below arch
@@ -102,10 +107,9 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
   const innerX = winX + frameFace;
   const innerY = winY + frameFace;
   const innerW = Math.max(200, width - frameFace * 2);
-  const innerH = Math.max(200, height - frameFace * 2);
+  const innerH = Math.max(200, isStandaloneArch ? 200 : height - frameFace * 2);
 
-  const panels = design.panels || [];
-  const hasElements = panels.length > 0;
+  const hasElements = panels.length > 0 || Boolean(design.hasArch);
 
   // Selected cell
   const selectedPanel = panels.find((p) => p.id === selectedComponentId) || null;
@@ -488,18 +492,18 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
         ...design,
         hasArch: false,
         archHeight: 0,
-        windowType: 'Sliding Window',
+        windowType: panels.length > 0 ? 'Sliding Window' : 'Sliding Window',
       });
     } else {
-      if (!design.panels || design.panels.length === 0) {
-        applyElementToCanvas('shape_rect_2');
-      }
+      const hasPanels = design.panels && design.panels.length > 0;
       onUpdateDesign({
         ...design,
         hasArch: true,
         archType: style,
-        archHeight: 500,
-        windowType: 'Combination Window',
+        archHeight: 600,
+        height: hasPanels ? design.height || 1200 : 0,
+        panels: hasPanels ? design.panels : [],
+        windowType: hasPanels ? 'Combination Window' : 'Arch Window',
       });
     }
   };
@@ -516,21 +520,34 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
 
     const updated = { ...design };
 
-    // 1. Arch Head Elements
+    // 1. Arch Head Elements (Supports Standalone Arch, Replacement, or Combination)
     if (itemId === 'shape_arch_round' || itemId === 'shape_arch_gothic' || itemId === 'shape_circle') {
-      if (!updated.panels || updated.panels.length === 0) {
-        applyElementToCanvas('shape_rect_2');
-      }
+      const hasPanels = updated.panels && updated.panels.length > 0;
+      const newArchType = itemId === 'shape_arch_gothic' ? 'gothic' : 'round';
       updated.hasArch = true;
-      updated.archType = itemId === 'shape_arch_gothic' ? 'gothic' : 'round';
-      updated.archHeight = updated.archHeight || 500;
-      updated.windowType = 'Combination Window';
+      updated.archType = newArchType;
+      updated.archHeight = updated.archHeight || 600;
+      if (!hasPanels) {
+        // Standalone Arch Window
+        updated.height = 0;
+        updated.panels = [];
+        updated.windowType = 'Arch Window';
+      } else {
+        // Arch + Window Combination
+        updated.height = updated.height || 1200;
+        updated.windowType = 'Combination Window';
+      }
       onUpdateDesign(updated);
+      onSelectComponent('arch-head', 'arch');
       return;
     }
 
-    // 2. Base Frame Shapes (Replaces / Initializes Layout)
+    // 2. Base Frame Shapes (Replaces / Initializes Layout, or attaches below standalone arch)
     if (itemId === 'shape_rect_1') {
+      if (updated.hasArch && (!updated.height || updated.height === 0)) {
+        updated.height = 1200;
+        updated.windowType = 'Combination Window';
+      }
       updated.panels = [
         {
           id: 'panel-01',
@@ -551,6 +568,10 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
     }
 
     if (itemId === 'shape_rect_2') {
+      if (updated.hasArch && (!updated.height || updated.height === 0)) {
+        updated.height = 1200;
+        updated.windowType = 'Combination Window';
+      }
       updated.panels = [
         {
           id: 'panel-01',
@@ -584,6 +605,10 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
     }
 
     if (itemId === 'shape_rect_3') {
+      if (updated.hasArch && (!updated.height || updated.height === 0)) {
+        updated.height = 1200;
+        updated.windowType = 'Combination Window';
+      }
       const pCount = 3;
       updated.panels = Array.from({ length: pCount }, (_, i) => ({
         id: `panel-0${i + 1}`,
@@ -606,6 +631,10 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
     }
 
     if (itemId === 'shape_rect_4') {
+      if (updated.hasArch && (!updated.height || updated.height === 0)) {
+        updated.height = 1200;
+        updated.windowType = 'Combination Window';
+      }
       const pCount = 4;
       updated.panels = Array.from({ length: pCount }, (_, i) => ({
         id: `panel-0${i + 1}`,
@@ -702,6 +731,10 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
       if (activeTargetId) setCellOperation(activeTargetId, 'fixed', 'fixed');
       return;
     }
+    if (itemId === 'sash_louver') {
+      if (activeTargetId) setCellOperation(activeTargetId, 'louver' as any, 'fixed');
+      return;
+    }
     if (itemId === 'mesh_bug') {
       if (activeTargetId) toggleCellMesh(activeTargetId);
       return;
@@ -739,19 +772,23 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
     return p.panelType;
   };
 
+  const areaSqM = parseFloat(((width * totalWindowHeight) / 1000000).toFixed(2));
+  const seriesDisplayName = design.seriesName || 'S_CRAFT_PREMIUM_SLIDING_SERIES';
+
   return (
-    <div className="relative w-full h-full flex overflow-hidden bg-black text-white">
-      {/* 1. Left Docked Draggable Shape & Element Library Palette */}
+    <div className="relative w-full h-full flex overflow-hidden bg-white text-slate-800 font-sans">
+      {/* 1. Left Docked WindoorCraft Two-Tier Shape & Element Palette */}
       <DraggableShapePalette
         onSelectItem={(item) => applyElementToCanvas(item.id)}
         onOpenCatalog={() => setIsCatalogOpen(true)}
+        onOpenQuote={() => setIsQuoteOpen(true)}
         activeTool={activeTool}
         onSelectTool={(tool) => setActiveTool(tool)}
       />
 
-      {/* 2. Main Precision CAD Canvas Area (Dark Architectural Theme) */}
+      {/* 2. Main Precision CAD Canvas Area (Clean Architectural Light Theme) */}
       <div
-        className="relative flex-1 h-full overflow-hidden flex flex-col items-center justify-center p-4 bg-[#090D16]"
+        className="relative flex-1 h-full overflow-hidden flex flex-col items-center justify-center p-4 bg-[#f8fafc]"
         onDragOver={(e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'copy';
@@ -763,14 +800,14 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
           setHoveredCellId(null);
         }}
       >
-        {/* Top Header & Mode Toggle Bar */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+        {/* Top Header & Breadcrumb Bar (Matching WindoorCraft wc_07_shape1.png) */}
+        <div className="absolute top-3 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
           {/* Window Identifier & Title */}
-          <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700 shadow-md pointer-events-auto">
-            <span className="text-xs font-black uppercase text-indigo-400 tracking-wider font-mono">
+          <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm pointer-events-auto">
+            <span className="text-xs font-black uppercase text-blue-600 tracking-wider font-mono">
               {design.id || 'W01'}
             </span>
-            <span className="text-slate-600">|</span>
+            <span className="text-slate-300">|</span>
             <input
               type="text"
               value={design.name || ''}
@@ -780,31 +817,51 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                   onUpdateDesign({ ...design, name: e.target.value });
                 }
               }}
-              className="bg-transparent text-xs font-semibold text-white placeholder-slate-500 focus:outline-none w-48 sm:w-72"
+              className="bg-transparent text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none w-44 sm:w-64"
             />
           </div>
 
+          {/* Center WindoorCraft Breadcrumb: {SERIES_NAME} / {Area} m² / {N} openings */}
+          <div className="hidden md:flex items-center bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-slate-200 shadow-sm pointer-events-auto text-xs font-medium text-blue-600 font-mono">
+            <span className="font-bold hover:underline cursor-pointer" onClick={() => setIsCatalogOpen(true)}>
+              {seriesDisplayName}
+            </span>
+            <span className="text-slate-400 mx-1.5">/</span>
+            <span className="text-slate-700">{areaSqM}m²</span>
+            <span className="text-slate-400 mx-1.5">/</span>
+            <span className="text-slate-700">{panels.length} openings</span>
+          </div>
+
           {/* Right Mode Switchers & Details Toggle */}
-          <div className="flex items-center gap-1.5 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-md pointer-events-auto">
-            {hasElements && (
+          <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md p-1 rounded-lg border border-slate-200 shadow-sm pointer-events-auto">
+            {(hasElements || viewMode === '3d') && (
               <button
                 type="button"
                 onClick={() => setViewMode(viewMode === '3d' ? '2d' : '3d')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === '3d'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-blue-600'
                 }`}
               >
-                <Box className="w-3.5 h-3.5" />
-                <span>{viewMode === '3d' ? '2D CAD' : '3D View'}</span>
+                {viewMode === '3d' ? (
+                  <>
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to 2D CAD</span>
+                  </>
+                ) : (
+                  <>
+                    <Box className="w-3.5 h-3.5" />
+                    <span>3D</span>
+                  </>
+                )}
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setIsCatalogOpen(true)}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-indigo-300 bg-indigo-950/80 hover:bg-indigo-900/80 border border-indigo-700/60 transition-all flex items-center gap-1.5"
+              className="px-2.5 py-1.5 rounded-md text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-all flex items-center gap-1.5 cursor-pointer"
               title="Select from catalog templates"
             >
               <FolderOpen className="w-3.5 h-3.5" />
@@ -815,8 +872,8 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
               <button
                 type="button"
                 onClick={handleClearCanvas}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
-                title="Clear Canvas to Blank"
+                className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                title="Clear Canvas"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -825,28 +882,29 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
             {/* Sidebar Toggle for Right Details Panel */}
             {onToggleConfigPanel && (
               <>
-                <div className="w-px h-4 bg-slate-700 mx-0.5" />
+                <div className="w-px h-4 bg-slate-200 mx-0.5" />
                 <button
                   type="button"
                   onClick={onToggleConfigPanel}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     isConfigPanelOpen
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
-                  title={isConfigPanelOpen ? 'Hide Details' : 'Show Details'}
+                  title={isConfigPanelOpen ? 'Hide Inspector' : 'Show Inspector'}
                 >
                   {isConfigPanelOpen ? (
                     <PanelRightClose className="w-4 h-4" />
                   ) : (
                     <PanelRight className="w-4 h-4" />
                   )}
-                  <span className="hidden sm:inline">Details</span>
+                  <span className="hidden sm:inline">Inspector</span>
                 </button>
               </>
             )}
           </div>
         </div>
+
 
         {/* ------------------------------------------------------------- */}
         {/* BLANK STATE: CLEAN CAD BLUEPRINT LAYOUT                      */}
@@ -936,23 +994,98 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                 {height} mm
               </text>
 
-              <text
-                x={winX + width / 2}
-                y={winY + height / 2 + 50}
-                textAnchor="middle"
-                fill="#94a3b8"
-                fontSize="15"
-                fontFamily="sans-serif"
-                fontWeight="600"
-              >
-                Drag shapes or elements from left palette here to design window
-              </text>
+              {/* Interactive Quick-Add Options on Empty Canvas */}
+              <g transform={`translate(${winX + width / 2}, ${winY + height / 2 - 50})`}>
+                <text
+                  x="0"
+                  y="-15"
+                  textAnchor="middle"
+                  fill="#94a3b8"
+                  fontSize="15"
+                  fontFamily="sans-serif"
+                  fontWeight="bold"
+                >
+                  Canvas Cleared • Select a Window Configuration or Drag from Palette:
+                </text>
+
+                <g transform="translate(-255, 20)">
+                  {/* Option 1: 2-Panel Sliding */}
+                  <g
+                    className="cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applyElementToCanvas('shape_rect_2');
+                    }}
+                  >
+                    <rect width="160" height="52" rx="10" fill="#1e1b4b" stroke="#6366f1" strokeWidth="1.5" className="group-hover:fill-indigo-900 transition-colors" />
+                    <text x="80" y="24" fill="#e0e7ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ 2-Panel Sliding</text>
+                    <text x="80" y="41" fill="#818cf8" fontSize="10" textAnchor="middle">2-Track Window (Standard)</text>
+                  </g>
+
+                  {/* Option 2: 3-Panel Sliding */}
+                  <g
+                    transform="translate(175, 0)"
+                    className="cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applyElementToCanvas('shape_rect_3');
+                    }}
+                  >
+                    <rect width="160" height="52" rx="10" fill="#1e1b4b" stroke="#6366f1" strokeWidth="1.5" className="group-hover:fill-indigo-900 transition-colors" />
+                    <text x="80" y="24" fill="#e0e7ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ 3-Panel Sliding</text>
+                    <text x="80" y="41" fill="#818cf8" fontSize="10" textAnchor="middle">3-Track System</text>
+                  </g>
+
+                  {/* Option 3: Arch Combination */}
+                  <g
+                    transform="translate(350, 0)"
+                    className="cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applyElementToCanvas('shape_arch_round');
+                      applyElementToCanvas('shape_rect_2');
+                    }}
+                  >
+                    <rect width="160" height="52" rx="10" fill="#3b0764" stroke="#c084fc" strokeWidth="1.5" className="group-hover:fill-purple-950 transition-colors" />
+                    <text x="80" y="24" fill="#f3e8ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ Arch Combination</text>
+                    <text x="80" y="41" fill="#c084fc" fontSize="10" textAnchor="middle">Arch + 2-Door Window</text>
+                  </g>
+
+                  {/* Option 4: Gothic Arch Head */}
+                  <g
+                    transform="translate(85, 68)"
+                    className="cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applyElementToCanvas('shape_arch_gothic');
+                    }}
+                  >
+                    <rect width="160" height="46" rx="10" fill="#3b0764" stroke="#c084fc" strokeWidth="1.5" className="group-hover:fill-purple-950 transition-colors" />
+                    <text x="80" y="22" fill="#f3e8ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ Gothic Arch Head</text>
+                    <text x="80" y="36" fill="#c084fc" fontSize="10" textAnchor="middle">Pointed Architectural</text>
+                  </g>
+
+                  {/* Option 5: 1-Panel Casement */}
+                  <g
+                    transform="translate(265, 68)"
+                    className="cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      applyElementToCanvas('shape_rect_1');
+                    }}
+                  >
+                    <rect width="160" height="46" rx="10" fill="#0f172a" stroke="#475569" strokeWidth="1.5" className="group-hover:fill-slate-800 transition-colors" />
+                    <text x="80" y="22" fill="#f8fafc" fontSize="12" fontWeight="bold" textAnchor="middle">+ 1-Panel Casement</text>
+                    <text x="80" y="36" fill="#94a3b8" fontSize="10" textAnchor="middle">Fixed or Hinged</text>
+                  </g>
+                </g>
+              </g>
             </svg>
           </div>
         ) : viewMode === '3d' ? (
           /* 3D WebGL Engine */
           <div className="w-full h-full rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
-            <Precision3DView design={design} />
+            <Precision3DView design={design} onClose={() => setViewMode('2d')} />
           </div>
         ) : (
           /* ------------------------------------------------------------- */
@@ -973,98 +1106,214 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
               preserveAspectRatio="xMidYMid meet"
             >
               <defs>
+                <linearGradient id="windoorGreenGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00e676" stopOpacity="0.88" />
+                  <stop offset="100%" stopColor="#00c853" stopOpacity="0.95" />
+                </linearGradient>
+
                 <linearGradient id="glassFillGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#0284c7" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#0369a1" stopOpacity="0.55" />
+                  <stop offset="0%" stopColor="#00e676" stopOpacity="0.88" />
+                  <stop offset="100%" stopColor="#00c853" stopOpacity="0.95" />
                 </linearGradient>
 
                 <linearGradient id="frameGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#f8fafc" />
-                  <stop offset="100%" stopColor="#e2e8f0" />
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#f8fafc" />
                 </linearGradient>
 
                 <linearGradient id="archGlassGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                  <stop offset="0%" stopColor="#0369a1" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#0284c7" stopOpacity="0.6" />
+                  <stop offset="0%" stopColor="#00e676" stopOpacity="0.88" />
+                  <stop offset="100%" stopColor="#00c853" stopOpacity="0.95" />
                 </linearGradient>
 
-                <pattern id="cadGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="0.5" />
+                <pattern id="cadGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <circle cx="15" cy="15" r="0.8" fill="#94a3b8" opacity="0.35" />
                 </pattern>
 
                 {/* Bug mesh pattern */}
                 <pattern id="meshGridPattern" width="6" height="6" patternUnits="userSpaceOnUse">
-                  <path d="M 6 0 L 0 0 0 6" fill="none" stroke="#60a5fa" strokeWidth="0.6" opacity="0.4" />
+                  <path d="M 6 0 L 0 0 0 6" fill="none" stroke="#0f172a" strokeWidth="0.6" opacity="0.3" />
                 </pattern>
               </defs>
 
-              {/* Background CAD Grid */}
+              {/* Background CAD Grid on Clean White */}
+              <rect width={vbWidth} height={vbHeight} fill="#ffffff" />
               <rect width={vbWidth} height={vbHeight} fill="url(#cadGrid)" />
+
 
               {/* ============================================================= */}
               {/* 1. ARCH HEAD COMBINATION (Attached on top of window frame)    */}
               {/* ============================================================= */}
               {design.hasArch && (
-                <g className="cursor-pointer group">
+                <g
+                  className="cursor-pointer group"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectComponent('arch-head', 'arch');
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const itemId = e.dataTransfer.getData('text/plain');
+                    applyElementToCanvas(itemId || 'shape_arch_round');
+                  }}
+                >
                   {/* Outer Arch Frame Profile */}
                   <path
-                    d={`M ${winX} ${winY} A ${width / 2} ${archHeight} 0 0 1 ${winX + width} ${winY} Z`}
+                    d={
+                      design.archType === 'gothic'
+                        ? `M ${winX} ${winY} Q ${winX} ${winY - archHeight * 0.88} ${winX + width / 2} ${winY - archHeight} Q ${winX + width} ${winY - archHeight * 0.88} ${winX + width} ${winY} Z`
+                        : `M ${winX} ${winY} A ${width / 2} ${archHeight} 0 0 1 ${winX + width} ${winY} Z`
+                    }
                     fill="url(#frameGradient)"
-                    stroke="#ffffff"
-                    strokeWidth="2.5"
+                    stroke={selectedComponentId === 'arch-head' ? '#c084fc' : '#ffffff'}
+                    strokeWidth={selectedComponentId === 'arch-head' ? '4' : '2.5'}
+                    className="cursor-pointer hover:stroke-purple-400 transition-colors"
                   />
                   {/* Inner Arch Glass Opening */}
                   <path
-                    d={`M ${innerX} ${winY} A ${innerW / 2} ${Math.max(50, archHeight - frameFace)} 0 0 1 ${innerX + innerW} ${winY} Z`}
+                    d={
+                      design.archType === 'gothic'
+                        ? `M ${innerX} ${winY} Q ${innerX} ${winY - Math.max(50, archHeight - frameFace) * 0.88} ${innerX + innerW / 2} ${winY - Math.max(50, archHeight - frameFace)} Q ${innerX + innerW} ${winY - Math.max(50, archHeight - frameFace) * 0.88} ${innerX + innerW} ${winY} Z`
+                        : `M ${innerX} ${winY} A ${innerW / 2} ${Math.max(50, archHeight - frameFace)} 0 0 1 ${innerX + innerW} ${winY} Z`
+                    }
                     fill="url(#archGlassGrad)"
                     stroke="#38bdf8"
                     strokeWidth="1.8"
                   />
 
-                  {/* Sunburst Radial Mullions */}
-                  {Array.from({ length: 5 }, (_, i) => {
-                    const angleDeg = 30 + i * 30;
-                    const angleRad = (angleDeg * Math.PI) / 180;
-                    const rX = innerW / 2;
-                    const rY = Math.max(50, archHeight - frameFace);
-                    const spokeX = winX + width / 2 - rX * Math.cos(angleRad);
-                    const spokeY = winY - rY * Math.sin(angleRad);
-                    return (
+                  {/* Mullions / Spokes */}
+                  {design.archType === 'gothic' ? (
+                    // Gothic Pointed Arch Mullions
+                    <>
+                      {/* Center Apex Mullion */}
                       <line
-                        key={i}
                         x1={winX + width / 2}
                         y1={winY}
-                        x2={spokeX}
-                        y2={spokeY}
+                        x2={winX + width / 2}
+                        y2={winY - Math.max(50, archHeight - frameFace)}
                         stroke="#e2e8f0"
-                        strokeWidth="2"
+                        strokeWidth="2.5"
+                      />
+                      {/* Left Lancet Mullion */}
+                      <line
+                        x1={winX + width * 0.28}
+                        y1={winY}
+                        x2={winX + width * 0.28}
+                        y2={winY - Math.max(50, archHeight - frameFace) * 0.65}
+                        stroke="#e2e8f0"
+                        strokeWidth="1.8"
                         strokeDasharray="2 1"
                       />
-                    );
-                  })}
+                      {/* Right Lancet Mullion */}
+                      <line
+                        x1={winX + width * 0.72}
+                        y1={winY}
+                        x2={winX + width * 0.72}
+                        y2={winY - Math.max(50, archHeight - frameFace) * 0.65}
+                        stroke="#e2e8f0"
+                        strokeWidth="1.8"
+                        strokeDasharray="2 1"
+                      />
+                    </>
+                  ) : (
+                    // Sunburst Radial Mullions
+                    Array.from({ length: 5 }, (_, i) => {
+                      const angleDeg = 30 + i * 30;
+                      const angleRad = (angleDeg * Math.PI) / 180;
+                      const rX = innerW / 2;
+                      const rY = Math.max(50, archHeight - frameFace);
+                      const spokeX = winX + width / 2 - rX * Math.cos(angleRad);
+                      const spokeY = winY - rY * Math.sin(angleRad);
+                      return (
+                        <line
+                          key={i}
+                          x1={winX + width / 2}
+                          y1={winY}
+                          x2={spokeX}
+                          y2={spokeY}
+                          stroke="#e2e8f0"
+                          strokeWidth="2"
+                          strokeDasharray="2 1"
+                        />
+                      );
+                    })
+                  )}
 
                   {/* Arch Head Badge */}
-                  <rect
-                    x={winX + width / 2 - 65}
-                    y={winY - archHeight / 2 - 14}
-                    width="130"
-                    height="28"
-                    rx="14"
-                    fill="#0f172a"
-                    stroke="#c084fc"
-                    strokeWidth="1.5"
-                    className="shadow-md"
-                  />
-                  <text
-                    x={winX + width / 2}
-                    y={winY - archHeight / 2 + 4}
-                    fill="#c084fc"
-                    fontSize="11"
-                    fontWeight="bold"
-                    textAnchor="middle"
-                  >
-                    Arch Head (Fixed)
-                  </text>
+                  <g transform={`translate(${winX + width / 2}, ${winY - archHeight / 2})`}>
+                    <rect
+                      x="-85"
+                      y="-14"
+                      width="170"
+                      height="28"
+                      rx="14"
+                      fill="#0f172a"
+                      stroke={design.archType === 'gothic' ? '#a855f7' : '#c084fc'}
+                      strokeWidth="1.5"
+                      className="shadow-md"
+                    />
+                    <text
+                      x="0"
+                      y="4"
+                      fill={design.archType === 'gothic' ? '#d8b4fe' : '#c084fc'}
+                      fontSize="11"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {design.archType === 'gothic' ? 'Gothic Pointed Arch (Fixed)' : 'Semi-Circular Arch (Fixed)'}
+                    </text>
+                  </g>
+
+                  {/* Quick Controls when Arch Head is Selected */}
+                  {selectedComponentId === 'arch-head' && (
+                    <g transform={`translate(${winX + width / 2}, ${winY - archHeight - 22})`}>
+                      {/* Switch Style Button */}
+                      <g
+                        className="cursor-pointer hover:opacity-90"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onUpdateDesign) {
+                            onUpdateDesign({
+                              ...design,
+                              archType: design.archType === 'gothic' ? 'round' : 'gothic',
+                            });
+                          }
+                        }}
+                      >
+                        <rect x="-105" y="-12" width="145" height="24" rx="12" fill="#581c87" stroke="#c084fc" strokeWidth="1.2" />
+                        <text x="-32" y="4" fill="#f3e8ff" fontSize="10" fontWeight="bold" textAnchor="middle">
+                          ⇄ Switch to {design.archType === 'gothic' ? 'Round' : 'Gothic'}
+                        </text>
+                      </g>
+
+                      {/* Remove Arch Button */}
+                      <g
+                        className="cursor-pointer hover:opacity-90"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onUpdateDesign) {
+                            onUpdateDesign({
+                              ...design,
+                              hasArch: false,
+                              archHeight: 0,
+                              windowType: panels.length > 0 ? 'Sliding Window' : 'Sliding Window',
+                            });
+                            onSelectComponent(null);
+                          }
+                        }}
+                      >
+                        <rect x="48" y="-12" width="62" height="24" rx="12" fill="#881337" stroke="#fda4af" strokeWidth="1.2" />
+                        <text x="79" y="4" fill="#ffe4e6" fontSize="10" fontWeight="bold" textAnchor="middle">
+                          ✕ Delete
+                        </text>
+                      </g>
+                    </g>
+                  )}
 
                   {/* Coupling Transom Profile Beam */}
                   <rect
@@ -1079,19 +1328,206 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                 </g>
               )}
 
+              {/* Top Boundary Drop Zone when NO Arch is present */}
+              {!design.hasArch && (
+                <g
+                  className="cursor-pointer group"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const itemId = e.dataTransfer.getData('text/plain');
+                    applyElementToCanvas(itemId || 'shape_arch_round');
+                  }}
+                >
+                  <rect
+                    x={winX}
+                    y={winY - 35}
+                    width={width}
+                    height="35"
+                    fill="transparent"
+                    stroke="#c084fc"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 4"
+                    className="opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+                  />
+                  <text
+                    x={winX + width / 2}
+                    y={winY - 14}
+                    textAnchor="middle"
+                    fill="#c084fc"
+                    fontSize="11"
+                    fontWeight="bold"
+                    className="opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity pointer-events-none"
+                  >
+                    + Drop Arch Head Here
+                  </text>
+                </g>
+              )}
+
               {/* ============================================================= */}
-              {/* 2. RECTANGULAR WINDOW OUTER FRAME                             */}
+              {/* 2. RECTANGULAR WINDOW OUTER FRAME (OR STANDALONE ARCH ATTACHMENT) */}
               {/* ============================================================= */}
-              <rect
-                x={winX}
-                y={winY}
-                width={width}
-                height={height}
-                fill="url(#frameGradient)"
-                stroke="#ffffff"
-                strokeWidth="2.5"
-                rx="2"
-              />
+              {isStandaloneArch ? (
+                /* STANDALONE ARCH WINDOW DROPZONE & ATTACHMENT SECTION */
+                <g
+                  className="cursor-pointer group"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const itemId = e.dataTransfer.getData('text/plain');
+                    applyElementToCanvas(itemId || 'shape_rect_2');
+                  }}
+                >
+                  {/* Bottom Arch Sill Profile */}
+                  <rect
+                    x={winX}
+                    y={winY}
+                    width={width}
+                    height="18"
+                    fill="url(#frameGradient)"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    rx="2"
+                  />
+
+                  {/* Dashed Attachment Zone below Arch */}
+                  <rect
+                    x={winX}
+                    y={winY + 36}
+                    width={width}
+                    height="200"
+                    rx="12"
+                    fill="#0b1329"
+                    stroke="#6366f1"
+                    strokeWidth="2"
+                    strokeDasharray="8 6"
+                    className="hover:stroke-indigo-400 hover:fill-slate-900/80 transition-colors"
+                  />
+
+                  {/* Attachment Zone Callout */}
+                  <g transform={`translate(${winX + width / 2}, ${winY + 95})`}>
+                    <circle cx="0" cy="0" r="22" fill="#1e1b4b" stroke="#818cf8" strokeWidth="2" />
+                    <text x="0" y="7" fill="#818cf8" fontSize="24" fontWeight="bold" textAnchor="middle">
+                      +
+                    </text>
+                    <text x="0" y="42" fill="#c7d2fe" fontSize="16" fontWeight="bold" textAnchor="middle">
+                      Attach Window Below Arch
+                    </text>
+                    <text x="0" y="64" fill="#94a3b8" fontSize="12" textAnchor="middle">
+                      Drag shapes from left palette here, or click a layout below:
+                    </text>
+                  </g>
+
+                  {/* Quick Layout Attachment Buttons */}
+                  <g transform={`translate(${winX + width / 2 - 210}, ${winY + 185})`}>
+                    {/* 1 Panel Button */}
+                    <g
+                      className="cursor-pointer hover:opacity-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        applyElementToCanvas('shape_rect_1');
+                      }}
+                    >
+                      <rect width="95" height="32" rx="8" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" />
+                      <text x="47" y="20" fill="#f8fafc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                        + 1-Panel
+                      </text>
+                    </g>
+                    {/* 2 Panel Button */}
+                    <g
+                      transform="translate(110, 0)"
+                      className="cursor-pointer hover:opacity-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        applyElementToCanvas('shape_rect_2');
+                      }}
+                    >
+                      <rect width="95" height="32" rx="8" fill="#4f46e5" stroke="#818cf8" strokeWidth="1.5" />
+                      <text x="47" y="20" fill="#ffffff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                        + 2-Panel
+                      </text>
+                    </g>
+                    {/* 3 Panel Button */}
+                    <g
+                      transform="translate(220, 0)"
+                      className="cursor-pointer hover:opacity-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        applyElementToCanvas('shape_rect_3');
+                      }}
+                    >
+                      <rect width="95" height="32" rx="8" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" />
+                      <text x="47" y="20" fill="#f8fafc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                        + 3-Panel
+                      </text>
+                    </g>
+                    {/* 4 Panel Button */}
+                    <g
+                      transform="translate(330, 0)"
+                      className="cursor-pointer hover:opacity-90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        applyElementToCanvas('shape_rect_4');
+                      }}
+                    >
+                      <rect width="95" height="32" rx="8" fill="#1e293b" stroke="#64748b" strokeWidth="1.5" />
+                      <text x="47" y="20" fill="#f8fafc" fontSize="11" fontWeight="bold" textAnchor="middle">
+                        + 4-Panel
+                      </text>
+                    </g>
+                  </g>
+                </g>
+              ) : (
+                <g>
+                  {/* Outer White Profile Extrusion */}
+                  <rect
+                    x={winX}
+                    y={winY}
+                    width={width}
+                    height={height}
+                    fill="#ffffff"
+                    stroke="#334155"
+                    strokeWidth="2"
+                    rx="1"
+                  />
+                  {/* Corner Miter 45-degree joint lines */}
+                  <line x1={winX} y1={winY} x2={innerX} y2={innerY} stroke="#cbd5e1" strokeWidth="1.5" />
+                  <line x1={winX + width} y1={winY} x2={innerX + innerW} y2={innerY} stroke="#cbd5e1" strokeWidth="1.5" />
+                  <line x1={winX} y1={winY + height} x2={innerX} y2={innerY + innerH} stroke="#cbd5e1" strokeWidth="1.5" />
+                  <line x1={winX + width} y1={winY + height} x2={innerX + innerW} y2={innerY + innerH} stroke="#cbd5e1" strokeWidth="1.5" />
+
+                  {/* Top Frame Series Label & AI Badge matching WindoorCraft wc_07_shape1.png */}
+                  <text
+                    x={winX + width / 2}
+                    y={winY - 14}
+                    fill="#0f172a"
+                    fontSize="13"
+                    fontWeight="bold"
+                    fontFamily="sans-serif"
+                    textAnchor="middle"
+                  >
+                    {seriesDisplayName}
+                  </text>
+                  <g transform={`translate(${winX + width - 26}, ${winY - 26})`}>
+                    <rect width="22" height="18" rx="3" fill="#ffffff" stroke="#94a3b8" strokeWidth="1" />
+                    <text x="11" y="13" fill="#475569" fontSize="10" fontWeight="bold" textAnchor="middle">AI</text>
+                  </g>
+
+                  {/* Top-Left Red 4-Way Movement Crosshair Handle */}
+                  <g transform={`translate(${winX - 10}, ${winY - 10})`} className="cursor-move">
+                    <title>Window Canvas Handle</title>
+                    <rect x="-3" y="-3" width="18" height="18" rx="3" fill="#ffffff" stroke="#ef4444" strokeWidth="1.2" />
+                    <path d="M6 1 L6 11 M1 6 L11 6 M6 1 L4 3 M6 1 L8 3 M6 11 L4 9 M6 11 L8 9 M1 6 L3 4 M1 6 L3 8 M11 6 L9 4 M11 6 L9 8" stroke="#ef4444" strokeWidth="1.2" strokeLinecap="round" />
+                  </g>
+                </g>
+              )}
 
               {/* Inner frame perimeter opening */}
               <rect
@@ -1099,10 +1535,11 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                 y={innerY}
                 width={innerW}
                 height={innerH}
-                fill="#0b1120"
+                fill="#f8fafc"
                 stroke="#64748b"
-                strokeWidth="2"
+                strokeWidth="1.8"
               />
+
 
               {/* ============================================================= */}
               {/* 3. MULTI-ELEMENT 2D CELLS (PANELS, SASHES, TRANSOMS, MULLIONS)*/}
@@ -1161,16 +1598,75 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                       className="transition-colors duration-150"
                     />
 
-                    {/* Glass Pane */}
-                    <rect
-                      x={pX + 8}
-                      y={pY + 8}
-                      width={Math.max(10, pW - 16)}
-                      height={Math.max(10, pH - 16)}
-                      fill="url(#glassFillGradient)"
-                      stroke={isSelected ? '#38bdf8' : '#0284c7'}
-                      strokeWidth="1.2"
-                    />
+                    {/* Glass Pane (Independently Selectable) */}
+                    {(() => {
+                      const isGlassSelected = selectedComponentId === panel.glassId;
+                      return (
+                        <g>
+                          <rect
+                            x={pX + 8}
+                            y={pY + 8}
+                            width={Math.max(10, pW - 16)}
+                            height={Math.max(10, pH - 16)}
+                            fill="url(#glassFillGradient)"
+                            stroke={isGlassSelected ? '#38bdf8' : '#0284c7'}
+                            strokeWidth={isGlassSelected ? '2.5' : '1.2'}
+                            className="cursor-pointer hover:stroke-sky-300 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectComponent(panel.glassId, 'glass');
+                            }}
+                          />
+                          {isGlassSelected && (
+                            <g className="pointer-events-none">
+                              <rect
+                                x={pX + 7}
+                                y={pY + 7}
+                                width={Math.max(10, pW - 14)}
+                                height={Math.max(10, pH - 14)}
+                                fill="none"
+                                stroke="#38bdf8"
+                                strokeWidth="2.5"
+                                strokeDasharray="5 3"
+                                className="animate-pulse"
+                              />
+                            </g>
+                          )}
+                        </g>
+                      );
+                    })()}
+
+                    {/* Horizontal Ventilation Louver Slats */}
+                    {panel.panelType === 'louver' && (
+                      <g className="pointer-events-none">
+                        {(() => {
+                          const count = Math.max(5, Math.min(20, Math.round(pH / 24)));
+                          return Array.from({ length: count }, (_, lIdx) => {
+                            const slatY = pY + 14 + (lIdx + 0.5) * ((pH - 28) / count);
+                            return (
+                            <g key={lIdx}>
+                              <line
+                                x1={pX + 12}
+                                y1={slatY - 3}
+                                x2={pX + pW - 12}
+                                y2={slatY - 3}
+                                stroke="#94a3b8"
+                                strokeWidth="2.5"
+                              />
+                              <line
+                                x1={pX + 12}
+                                y1={slatY + 2}
+                                x2={pX + pW - 12}
+                                y2={slatY + 2}
+                                stroke="#38bdf8"
+                                strokeWidth="1.2"
+                              />
+                            </g>
+                          );
+                        });
+                      })()}
+                    </g>
+                  )}
 
                     {/* Bug Mesh Overlay if enabled */}
                     {panel.meshId && (
@@ -1271,54 +1767,49 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                       </>
                     )}
 
-                    {/* Central Cell Badge & Glass Dimensions */}
+                    {/* Central Cell Badge & Glass Dimensions matching WindoorCraft wc_07_shape1.png */}
                     <g transform={`translate(${pX + pW / 2}, ${pY + pH / 2})`}>
-                      {/* Circular Identifier Pill */}
-                      <circle
-                        cx="0"
-                        cy="-16"
-                        r="15"
-                        fill={isSelected ? '#0284c7' : '#0f172a'}
-                        stroke="#38bdf8"
-                        strokeWidth={isSelected ? '2.5' : '1.5'}
-                        className="shadow-md"
-                      />
+                      {/* Crisp Bold Opening Identifier (F1, F2, S1) */}
                       <text
                         x="0"
-                        y="-11"
-                        fill={isSelected ? '#ffffff' : '#38bdf8'}
-                        fontSize="12"
+                        y="-4"
+                        fill="#0f172a"
+                        fontSize="18"
                         fontWeight="bold"
+                        fontFamily="sans-serif"
                         textAnchor="middle"
                       >
-                        {panel.name || `A${idx + 1}`}
+                        {panel.name || (panel.panelType === 'fixed' ? `F${idx + 1}` : `S${idx + 1}`)}
                       </text>
 
-                      {/* Operation type label */}
-                      <text
-                        x="0"
-                        y="6"
-                        fill={isSelected ? '#ffffff' : '#cbd5e1'}
-                        fontSize="10"
-                        fontWeight="600"
-                        textAnchor="middle"
-                      >
-                        {formatOpeningLabel(panel)}
-                      </text>
+                      {/* Sliding Direction Arrows or Operation badge */}
+                      {panel.panelType === 'sliding' && (
+                        <text
+                          x="0"
+                          y="13"
+                          fill="#0f172a"
+                          fontSize="13"
+                          fontWeight="bold"
+                          textAnchor="middle"
+                        >
+                          {panel.openingDirection === 'sliding_left' ? '◄──' : '──►'}
+                        </text>
+                      )}
 
-                      {/* Glass cut size */}
+                      {/* Glass Cut Size */}
                       <text
                         x="0"
-                        y="22"
-                        fill="#38bdf8"
+                        y={panel.panelType === 'sliding' ? "28" : "15"}
+                        fill="#334155"
                         fontSize="11"
                         fontFamily="monospace"
                         fontWeight="bold"
                         textAnchor="middle"
                       >
-                        {glassW} × {glassH} mm
+                        {glassW} × {glassH}
                       </text>
                     </g>
+
 
                     {/* Meeting Stile Handle if sliding / casement */}
                     {(panel.panelType === 'sliding' || panel.panelType === 'casement') && (
@@ -1376,35 +1867,75 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
               {/* ============================================================= */}
               {/* 4. INTERNAL DIVISION MULLIONS & TRANSOMS BEAMS                */}
               {/* ============================================================= */}
-              {/* Vertical Mullion Beams between distinct columns */}
+              {/* Vertical Mullion Beams between distinct columns (Interactive & Selectable) */}
               {sortedX.slice(1, -1).map((xVal, i) => {
                 const mX = innerX + innerW * xVal;
+                const mullionId = design.mullions?.[i]?.id || `mullion-0${i + 1}`;
+                const isMullionSelected = selectedComponentId === mullionId;
                 return (
-                  <line
+                  <g
                     key={i}
-                    x1={mX}
-                    y1={innerY}
-                    x2={mX}
-                    y2={innerY + innerH}
-                    stroke="#cbd5e1"
-                    strokeWidth="3.5"
-                  />
+                    className="cursor-ew-resize group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectComponent(mullionId, 'mullion');
+                    }}
+                  >
+                    {/* Wider invisible target area for easy clicking */}
+                    <line
+                      x1={mX}
+                      y1={innerY}
+                      x2={mX}
+                      y2={innerY + innerH}
+                      stroke="transparent"
+                      strokeWidth="16"
+                    />
+                    {/* Visible Mullion Extrusion Beam */}
+                    <line
+                      x1={mX}
+                      y1={innerY}
+                      x2={mX}
+                      y2={innerY + innerH}
+                      stroke={isMullionSelected ? '#818cf8' : '#cbd5e1'}
+                      strokeWidth={isMullionSelected ? '6' : '4'}
+                      className="group-hover:stroke-indigo-400 transition-colors"
+                    />
+                  </g>
                 );
               })}
 
-              {/* Horizontal Transom Beams between distinct rows */}
+              {/* Horizontal Transom Beams between distinct rows (Interactive & Selectable) */}
               {sortedY.slice(1, -1).map((yVal, i) => {
                 const tY = innerY + innerH * yVal;
+                const transomId = design.transoms?.[i]?.id || `transom-0${i + 1}`;
+                const isTransomSelected = selectedComponentId === transomId;
                 return (
-                  <line
+                  <g
                     key={i}
-                    x1={innerX}
-                    y1={tY}
-                    x2={innerX + innerW}
-                    y2={tY}
-                    stroke="#cbd5e1"
-                    strokeWidth="3.5"
-                  />
+                    className="cursor-ns-resize group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectComponent(transomId, 'transom');
+                    }}
+                  >
+                    <line
+                      x1={innerX}
+                      y1={tY}
+                      x2={innerX + innerW}
+                      y2={tY}
+                      stroke="transparent"
+                      strokeWidth="16"
+                    />
+                    <line
+                      x1={innerX}
+                      y1={tY}
+                      x2={innerX + innerW}
+                      y2={tY}
+                      stroke={isTransomSelected ? '#818cf8' : '#cbd5e1'}
+                      strokeWidth={isTransomSelected ? '6' : '4'}
+                      className="group-hover:stroke-indigo-400 transition-colors"
+                    />
+                  </g>
                 );
               })}
 
@@ -1454,76 +1985,86 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
 
               {/* B. OVERALL WIDTH (BOTTOM TIER)                                */}
               <g>
-                <line
-                  x1={winX}
-                  y1={winY + height + 45}
-                  x2={winX + width}
-                  y2={winY + height + 45}
-                  stroke="#38bdf8"
-                  strokeWidth="2"
-                />
-                <polygon
-                  points={`${winX + 12},${winY + height + 41} ${winX},${winY + height + 45} ${winX + 12},${winY + height + 49}`}
-                  fill="#38bdf8"
-                />
-                <polygon
-                  points={`${winX + width - 12},${winY + height + 41} ${winX + width},${winY + height + 45} ${winX + width - 12},${winY + height + 49}`}
-                  fill="#38bdf8"
-                />
-                <line x1={winX} y1={winY + height} x2={winX} y2={winY + height + 55} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
-                <line x1={winX + width} y1={winY + height} x2={winX + width} y2={winY + height + 55} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
+                {(() => {
+                  const dimY = isStandaloneArch ? winY + 265 : winY + height + 50;
+                  return (
+                    <>
+                      {/* Dimension Line with Witness Ticks */}
+                      <line
+                        x1={winX}
+                        y1={dimY}
+                        x2={winX + width}
+                        y2={dimY}
+                        stroke="#0f172a"
+                        strokeWidth="2"
+                      />
+                      <line x1={winX} y1={dimY - 10} x2={winX} y2={dimY + 10} stroke="#0f172a" strokeWidth="2.5" />
+                      <line x1={winX + width} y1={dimY - 10} x2={winX + width} y2={dimY + 10} stroke="#0f172a" strokeWidth="2.5" />
+                      <line x1={winX} y1={isStandaloneArch ? winY : winY + height} x2={winX} y2={dimY + 14} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
+                      <line x1={winX + width} y1={isStandaloneArch ? winY : winY + height} x2={winX + width} y2={dimY + 14} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
 
-                <text
-                  x={winX + width / 2}
-                  y={winY + height + 36}
-                  fill="#38bdf8"
-                  fontSize="22"
-                  fontWeight="900"
-                  fontFamily="monospace"
-                  textAnchor="middle"
-                  className="cursor-pointer hover:underline"
-                  onClick={() => setIsEditingWidth(true)}
-                >
-                  {width} mm (Total Width)
-                </text>
+                      {/* Crisp Bold Black Dimension Value */}
+                      <text
+                        x={winX + width / 2}
+                        y={dimY - 8}
+                        fill="#0f172a"
+                        fontSize="26"
+                        fontWeight="900"
+                        fontFamily="sans-serif"
+                        textAnchor="middle"
+                        className="cursor-pointer hover:underline"
+                        onClick={() => setIsEditingWidth(true)}
+                      >
+                        {width}
+                      </text>
+
+                      {/* WindoorCraft External / Internal Boundary Indicator Line */}
+                      <g transform={`translate(${winX}, ${dimY + 38})`}>
+                        <text x="-12" y="-4" fill="#0f172a" fontSize="11" fontWeight="bold" textAnchor="end">External</text>
+                        <line x1="-58" y1="0" x2="-8" y2="0" stroke="#0f172a" strokeWidth="1" />
+                        <text x="-12" y="11" fill="#0f172a" fontSize="11" fontWeight="bold" textAnchor="end">Internal</text>
+
+                        <line x1="0" y1="0" x2={width} y2="0" stroke="#0f172a" strokeWidth="2" strokeDasharray="6 4" />
+                        <line x1="0" y1="-8" x2="0" y2="8" stroke="#0f172a" strokeWidth="4" />
+                        <line x1={width} y1="-8" x2={width} y2="8" stroke="#0f172a" strokeWidth="4" />
+                      </g>
+                    </>
+                  );
+                })()}
               </g>
 
               {/* C. OVERALL HEIGHT (LEFT TIER)                                 */}
+              {!isStandaloneArch && (
               <g>
                 <line
                   x1={winX - 45}
                   y1={winY}
                   x2={winX - 45}
                   y2={winY + height}
-                  stroke="#38bdf8"
+                  stroke="#0f172a"
                   strokeWidth="2"
                 />
-                <polygon
-                  points={`${winX - 49},${winY + 12} ${winX - 45},${winY} ${winX - 41},${winY + 12}`}
-                  fill="#38bdf8"
-                />
-                <polygon
-                  points={`${winX - 49},${winY + height - 12} ${winX - 45},${winY + height} ${winX - 41},${winY + height - 12}`}
-                  fill="#38bdf8"
-                />
-                <line x1={winX - 58} y1={winY} x2={winX} y2={winY} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
-                <line x1={winX - 58} y1={winY + height} x2={winX} y2={winY + height} stroke="#38bdf8" strokeWidth="1" strokeDasharray="2 2" />
+                <line x1={winX - 55} y1={winY} x2={winX - 35} y2={winY} stroke="#0f172a" strokeWidth="2.5" />
+                <line x1={winX - 55} y1={winY + height} x2={winX - 35} y2={winY + height} stroke="#0f172a" strokeWidth="2.5" />
+                <line x1={winX - 60} y1={winY} x2={winX} y2={winY} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
+                <line x1={winX - 60} y1={winY + height} x2={winX} y2={winY + height} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
 
                 <text
-                  x={winX - 60}
+                  x={winX - 58}
                   y={winY + height / 2 + 8}
-                  fill="#38bdf8"
-                  fontSize="20"
+                  fill="#0f172a"
+                  fontSize="26"
                   fontWeight="900"
-                  fontFamily="monospace"
+                  fontFamily="sans-serif"
                   textAnchor="middle"
-                  transform={`rotate(-90 ${winX - 60}, ${winY + height / 2})`}
+                  transform={`rotate(-90 ${winX - 58}, ${winY + height / 2})`}
                   className="cursor-pointer hover:underline"
                   onClick={() => setIsEditingHeight(true)}
                 >
-                  {height} mm (Height)
+                  {height}
                 </text>
               </g>
+              )}
 
               {/* D. ARCH RISE & TOTAL HEIGHT (IF ARCH PRESENT)                 */}
               {design.hasArch && (
@@ -1535,36 +2076,31 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                       y1={winY - archHeight}
                       x2={winX - 45}
                       y2={winY}
-                      stroke="#c084fc"
+                      stroke="#7c3aed"
                       strokeWidth="2"
                     />
-                    <polygon
-                      points={`${winX - 49},${winY - archHeight + 12} ${winX - 45},${winY - archHeight} ${winX - 41},${winY - archHeight + 12}`}
-                      fill="#c084fc"
-                    />
-                    <polygon
-                      points={`${winX - 49},${winY - 12} ${winX - 45},${winY} ${winX - 41},${winY - 12}`}
-                      fill="#c084fc"
-                    />
-                    <line x1={winX - 58} y1={winY - archHeight} x2={winX + width / 2} y2={winY - archHeight} stroke="#c084fc" strokeWidth="1" strokeDasharray="2 2" />
+                    <line x1={winX - 55} y1={winY - archHeight} x2={winX - 35} y2={winY - archHeight} stroke="#7c3aed" strokeWidth="2.5" />
+                    <line x1={winX - 55} y1={winY} x2={winX - 35} y2={winY} stroke="#7c3aed" strokeWidth="2.5" />
+                    <line x1={winX - 60} y1={winY - archHeight} x2={winX + width / 2} y2={winY - archHeight} stroke="#7c3aed" strokeWidth="1" strokeDasharray="2 2" />
 
                     <text
-                      x={winX - 60}
+                      x={winX - 58}
                       y={winY - archHeight / 2 + 8}
-                      fill="#c084fc"
-                      fontSize="17"
+                      fill="#7c3aed"
+                      fontSize="22"
                       fontWeight="900"
-                      fontFamily="monospace"
+                      fontFamily="sans-serif"
                       textAnchor="middle"
-                      transform={`rotate(-90 ${winX - 60}, ${winY - archHeight / 2})`}
+                      transform={`rotate(-90 ${winX - 58}, ${winY - archHeight / 2})`}
                       className="cursor-pointer hover:underline"
                       onClick={() => setIsEditingArchHeight(true)}
                     >
-                      {archHeight} mm (Arch Rise)
+                      {archHeight}
                     </text>
                   </g>
 
                   {/* Combined Outer Elevation */}
+                  {!isStandaloneArch && (
                   <g>
                     <line
                       x1={winX - 105}
@@ -1598,6 +2134,7 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
                       {height + archHeight} mm Combined Total
                     </text>
                   </g>
+                  )}
                 </>
               )}
 
@@ -2008,6 +2545,14 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
         onClose={() => setIsSheetOpen(false)}
         design={design}
       />
+
+      {/* 5. WindoorCraft Itemized Quote & Cutting List Modal */}
+      <WindoorQuoteModal
+        isOpen={isQuoteOpen}
+        onClose={() => setIsQuoteOpen(false)}
+        design={design}
+      />
     </div>
   );
 };
+

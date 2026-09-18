@@ -6,7 +6,8 @@ export type WindowComponentType =
   | 'mullion'
   | 'transom'
   | 'panel'
-  | 'hardware';
+  | 'hardware'
+  | 'arch';
 
 export type ProfileBrandName = 'VEKA' | 'REHAU' | 'KOMMERLING' | 'ALUPLAST' | 'Other';
 export type GlassTypeName = 'Clear' | 'Toughened' | 'Laminated' | 'Frosted' | 'Tinted' | 'DGU / IGU';
@@ -19,7 +20,8 @@ export type OpeningDirectionType =
   | 'casement_left'
   | 'casement_right'
   | 'tilt_turn'
-  | 'top_hung';
+  | 'top_hung'
+  | 'louver';
 
 export interface GlassComponentConfig {
   glassType: GlassTypeName;
@@ -41,7 +43,7 @@ export interface SashComponentConfig {
 export interface DesignPanel {
   id: string; // e.g. "panel-01"
   name: string; // e.g. "Left Panel (Fixed)"
-  panelType: 'fixed' | 'sliding' | 'casement';
+  panelType: 'fixed' | 'sliding' | 'casement' | 'louver';
   openingDirection: OpeningDirectionType;
   xRatio: number; // 0 to 1 (left proportion)
   widthRatio: number; // 0 to 1 (width proportion)
@@ -78,7 +80,7 @@ export interface ParametricWindowDesign {
   id: string; // e.g. "W01"
   name: string; // e.g. "Living Room"
   projectId: string;
-  windowType: 'Sliding Window' | 'Casement Window' | 'Combination Window' | 'Fixed Window';
+  windowType: 'Sliding Window' | 'Casement Window' | 'Combination Window' | 'Fixed Window' | 'Arch Window';
   width: number; // overall width in mm
   height: number; // overall height in mm
   quantity: number;
@@ -88,6 +90,7 @@ export interface ParametricWindowDesign {
   profileBrand: ProfileBrandName;
   profileSystem: string; // e.g. "60 mm", "70 mm", "88 mm"
   profileSeries: string; // e.g. "Sliding Series", "Casement Series"
+  seriesName?: string; // WindoorCraft series name e.g. "A_60", "B_88"
   profileColor: string; // e.g. "Clear", "Pure White", "Anthracite Grey", "Golden Oak"
 
   // Rates
@@ -119,10 +122,20 @@ export interface ParametricWindowDesign {
   hasArch?: boolean;
   archType?: 'round' | 'gothic' | 'segmental';
   archHeight?: number; // mm rise of arch on top of window
+  archSpringHeight?: number; // mm height where arch starts curving
   archSpokes?: number; // number of radial mullion spokes
 
   // Additional sections / custom hardware added manually by user
   customSections?: CustomSectionItem[];
+
+  // Fabricator order specifications (WindoorCraft compatible)
+  connector?: string;
+  cornerJoiner?: string;
+  reinforcement?: string;
+  screenType?: string;
+  hingeType?: string;
+  finishType?: string;
+  notes?: string;
 
   // Optional manual price overrides
   manualProfileCost?: number;
