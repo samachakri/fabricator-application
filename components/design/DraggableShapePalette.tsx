@@ -1,531 +1,516 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Layers,
-  Sparkles,
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  MousePointer2, 
+  Square,
+  LayoutGrid,
+  Settings,
+  MoreHorizontal
 } from 'lucide-react';
 
-export type DraggableItemType =
-  | 'shape_rect_1'
-  | 'shape_rect_2'
-  | 'shape_rect_3'
-  | 'shape_arch_round'
-  | 'shape_arch_gothic'
-  | 'shape_circle'
-  | 'mullion_vertical'
-  | 'transom_horizontal'
-  | 'sash_sliding_left'
-  | 'sash_sliding_right'
-  | 'sash_casement_left'
-  | 'sash_casement_right'
-  | 'sash_top_hung'
-  | 'sash_tilt_turn'
-  | 'sash_louver'
-  | 'sash_fixed'
-  | 'mesh_bug';
+export type DraggableItemType = 'shape' | 'filling' | 'hardware' | 'mullion' | 'transom';
 
 export interface PaletteItem {
-  id: DraggableItemType;
-  name: string;
-  category: 'shapes' | 'divisions' | 'sashes';
-  iconSvg: React.ReactNode;
-  description: string;
+  id: string;
+  type: DraggableItemType;
+  label: string;
+  icon?: React.ReactNode;
 }
-
-// Reality-used icons matching WinQuoter CAD software (icon-only presentation)
-const PALETTE_ITEMS: PaletteItem[] = [
-  // 1. Base Shapes & Openings
-  {
-    id: 'shape_rect_1',
-    name: '1-Panel Window',
-    category: 'shapes',
-    description: 'Single outer frame opening',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="3" y="3" width="22" height="22" rx="1.5" />
-        <rect x="6" y="6" width="16" height="16" strokeDasharray="2 2" className="opacity-60" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shape_rect_2',
-    name: '2-Panel Window',
-    category: 'shapes',
-    description: '2-Panel sliding / casement frame',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="3" y="3" width="22" height="22" rx="1.5" />
-        <line x1="14" y1="3" x2="14" y2="25" />
-        <rect x="5.5" y="5.5" width="6.5" height="17" />
-        <rect x="16" y="5.5" width="6.5" height="17" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shape_rect_3',
-    name: '3-Panel Window',
-    category: 'shapes',
-    description: '3-Panel multi-track frame',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="2" y="4" width="24" height="20" rx="1.5" />
-        <line x1="10" y1="4" x2="10" y2="24" />
-        <line x1="18" y1="4" x2="18" y2="24" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shape_arch_round',
-    name: 'Round Arch Window / Head',
-    category: 'shapes',
-    description: 'Semi-circular arch window or arch top head',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <path d="M4 23 V14 A10 10 0 0 1 24 14 V23 Z" />
-        <line x1="14" y1="23" x2="14" y2="4" strokeDasharray="2 1" className="opacity-70" />
-        <line x1="14" y1="23" x2="7" y2="9" strokeDasharray="2 1" className="opacity-70" />
-        <line x1="14" y1="23" x2="21" y2="9" strokeDasharray="2 1" className="opacity-70" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shape_arch_gothic',
-    name: 'Gothic Pointed Arch',
-    category: 'shapes',
-    description: 'Pointed gothic architectural arch',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <path d="M4 24 V13 Q4 4 14 2 Q24 4 24 13 V24 Z" />
-        <line x1="14" y1="24" x2="14" y2="2" strokeDasharray="2 1" className="opacity-70" />
-      </svg>
-    ),
-  },
-  {
-    id: 'shape_circle',
-    name: 'Circular Bullseye Window',
-    category: 'shapes',
-    description: 'Fixed circular round window',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <circle cx="14" cy="14" r="10" />
-        <line x1="14" y1="4" x2="14" y2="24" strokeDasharray="2 1" className="opacity-70" />
-        <line x1="4" y1="14" x2="24" y2="14" strokeDasharray="2 1" className="opacity-70" />
-      </svg>
-    ),
-  },
-
-  // 2. Structural Divisions (Mullions & Transoms)
-  {
-    id: 'mullion_vertical',
-    name: 'Vertical Mullion',
-    category: 'divisions',
-    description: 'Split section vertically',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" strokeDasharray="2 2" />
-        <rect x="12" y="3" width="4" height="22" className="fill-indigo-500/30 stroke-indigo-600" />
-      </svg>
-    ),
-  },
-  {
-    id: 'transom_horizontal',
-    name: 'Horizontal Transom',
-    category: 'divisions',
-    description: 'Split section horizontally (Transom bar)',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" strokeDasharray="2 2" />
-        <rect x="4" y="10" width="20" height="4" className="fill-indigo-500/30 stroke-indigo-600" />
-      </svg>
-    ),
-  },
-
-  // 3. Operational Sashes & Functional Units (Reality-used in WinQuoter)
-  {
-    id: 'sash_fixed',
-    name: 'Fixed Glass',
-    category: 'sashes',
-    description: 'Direct glazed picture glass',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <line x1="4" y1="3" x2="24" y2="25" strokeDasharray="2 2" className="opacity-40" />
-        <line x1="24" y1="3" x2="4" y2="25" strokeDasharray="2 2" className="opacity-40" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_sliding_left',
-    name: 'Sliding (Left ◄)',
-    category: 'sashes',
-    description: 'Horizontal sliding sash moving left',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <path d="M17 14 H9 M12 11 L9 14 L12 17" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="21" y1="7" x2="21" y2="21" strokeWidth="2.5" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_sliding_right',
-    name: 'Sliding (Right ►)',
-    category: 'sashes',
-    description: 'Horizontal sliding sash moving right',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <path d="M11 14 H19 M16 11 L19 14 L16 17" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1="7" y1="7" x2="7" y2="21" strokeWidth="2.5" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_casement_left',
-    name: 'Casement (Left ◄)',
-    category: 'sashes',
-    description: 'Side-hung casement hinged on left',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <polyline points="4,3 24,14 4,25" strokeDasharray="2 2" />
-        <circle cx="21" cy="14" r="1.5" className="fill-current" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_casement_right',
-    name: 'Casement (Right ►)',
-    category: 'sashes',
-    description: 'Side-hung casement hinged on right',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <polyline points="24,3 4,14 24,25" strokeDasharray="2 2" />
-        <circle cx="7" cy="14" r="1.5" className="fill-current" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_top_hung',
-    name: 'Top Hung / Awning',
-    category: 'sashes',
-    description: 'Top-hinged awning sash opening outward',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <polyline points="4,3 14,25 24,3" strokeDasharray="2 2" />
-        <circle cx="14" cy="22" r="1.5" className="fill-current" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_tilt_turn',
-    name: 'Tilt & Turn',
-    category: 'sashes',
-    description: 'Dual-action tilt top and side swing',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <polyline points="4,25 14,3 24,25" strokeDasharray="2 2" />
-        <polyline points="4,3 24,14 4,25" strokeDasharray="1.5 1.5" className="opacity-50" />
-      </svg>
-    ),
-  },
-  {
-    id: 'sash_louver',
-    name: 'Louver Blades',
-    category: 'sashes',
-    description: 'Horizontal ventilation louver slats',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <line x1="6" y1="7" x2="22" y2="7" />
-        <line x1="6" y1="11" x2="22" y2="11" />
-        <line x1="6" y1="15" x2="22" y2="15" />
-        <line x1="6" y1="19" x2="22" y2="19" />
-        <line x1="6" y1="23" x2="22" y2="23" />
-      </svg>
-    ),
-  },
-  {
-    id: 'mesh_bug',
-    name: 'Bug Mesh (SS304)',
-    category: 'sashes',
-    description: 'Stainless steel insect screen mesh',
-    iconSvg: (
-      <svg viewBox="0 0 28 28" className="w-6 h-6 stroke-current fill-none stroke-[1.8]">
-        <rect x="4" y="3" width="20" height="22" rx="1.5" />
-        <line x1="9" y1="3" x2="9" y2="25" strokeDasharray="1.5 1.5" />
-        <line x1="14" y1="3" x2="14" y2="25" strokeDasharray="1.5 1.5" />
-        <line x1="19" y1="3" x2="19" y2="25" strokeDasharray="1.5 1.5" />
-        <line x1="4" y1="8" x2="24" y2="8" strokeDasharray="1.5 1.5" />
-        <line x1="4" y1="14" x2="24" y2="14" strokeDasharray="1.5 1.5" />
-        <line x1="4" y1="20" x2="24" y2="20" strokeDasharray="1.5 1.5" />
-      </svg>
-    ),
-  },
-];
 
 interface DraggableShapePaletteProps {
   onSelectItem: (item: PaletteItem) => void;
-  onOpenCatalog: () => void;
   onOpenQuote?: () => void;
-  activeTool?: string;
-  onSelectTool?: (tool: string) => void;
+  onOpen3D?: () => void;
 }
 
-export const DraggableShapePalette: React.FC<DraggableShapePaletteProps> = ({
-  onSelectItem,
-  onOpenCatalog,
-  onOpenQuote,
-  activeTool = 'select',
-  onSelectTool,
-}) => {
+// Category Icons defined as inline SVGs to perfectly match the UI
+const CatIconShapes = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="4" y="4" width="16" height="16" />
+  </svg>
+);
+
+const CatIconCasement = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="3" y="3" width="8" height="18" />
+    <rect x="13" y="3" width="8" height="18" />
+    <path d="M11 12h2" />
+  </svg>
+);
+
+const CatIconSliding = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="3" y="4" width="18" height="16" />
+    <line x1="12" y1="4" x2="12" y2="20" />
+    <line x1="14" y1="10" x2="16" y2="10" />
+    <line x1="8" y1="14" x2="10" y2="14" />
+  </svg>
+);
+
+const CatIconSlideFold = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="2" y="4" width="6" height="16" />
+    <rect x="9" y="4" width="6" height="16" />
+    <rect x="16" y="4" width="6" height="16" />
+    <path d="M5 12l2-2 2 2" />
+  </svg>
+);
+
+const CatIconGrid = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="3" y="3" width="18" height="18" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <line x1="15" y1="3" x2="15" y2="21" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="3" y1="15" x2="21" y2="15" />
+  </svg>
+);
+
+const CatIconBay = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <path d="M4 18L8 6h8l4 12z" />
+    <line x1="8" y1="6" x2="8" y2="18" />
+    <line x1="16" y1="6" x2="16" y2="18" />
+  </svg>
+);
+
+const CatIconArch = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <path d="M4 20V12a8 8 0 0 1 16 0v8" />
+    <line x1="4" y1="20" x2="20" y2="20" />
+  </svg>
+);
+
+const CatIconCircle = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <circle cx="12" cy="12" r="9" />
+  </svg>
+);
+
+const CatIconSpecialty = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <polygon points="12 2 22 8 22 18 12 24 2 18 2 8 12 2" />
+  </svg>
+);
+
+const CatIconFillings = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="1.5" fill="none">
+    <rect x="3" y="3" width="18" height="18" />
+    <line x1="3" y1="21" x2="21" y2="3" />
+    <line x1="3" y1="15" x2="15" y2="3" />
+    <line x1="9" y1="21" x2="21" y2="9" />
+  </svg>
+);
+
+// Shape Icons for the grid (using standard SVG paths for accuracy)
+const IconRect = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="20" height="20" />
+  </svg>
+);
+
+const IconArch = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M4 24V14a10 10 0 0 1 20 0v10z" />
+  </svg>
+);
+
+const IconU = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M4 4v10a10 10 0 0 0 20 0V4z" />
+  </svg>
+);
+
+const IconUMullion = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M4 4v10a10 10 0 0 0 20 0V4z" />
+    <line x1="14" y1="4" x2="14" y2="24" />
+  </svg>
+);
+
+const IconMultiArch = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M4 24V12a10 10 0 0 1 20 0v12z" />
+    <line x1="14" y1="12" x2="14" y2="24" />
+    <line x1="4" y1="12" x2="24" y2="12" />
+  </svg>
+);
+
+const IconGrid4 = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="20" height="20" />
+    <line x1="14" y1="4" x2="14" y2="24" />
+    <line x1="4" y1="14" x2="24" y2="14" />
+  </svg>
+);
+
+const IconCircleShape = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <circle cx="14" cy="14" r="10" />
+  </svg>
+);
+
+const IconDLeft = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M18 4v20A10 10 0 0 1 18 4z" />
+    <line x1="18" y1="4" x2="18" y2="24" />
+  </svg>
+);
+
+const IconDRight = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M10 4v20a10 10 0 0 0 0-20z" />
+    <line x1="10" y1="4" x2="10" y2="24" />
+  </svg>
+);
+
+const IconTriangle = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <polygon points="14,4 24,24 4,24" />
+  </svg>
+);
+
+const IconDiamond = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <polygon points="14,4 24,14 14,24 4,14" />
+  </svg>
+);
+
+const IconTrapezoid = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <polygon points="8,4 20,4 26,24 2,24" />
+  </svg>
+);
+
+const IconPentagon = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <polygon points="14,4 26,12 21,24 7,24 2,12" />
+  </svg>
+);
+
+const IconHexagon = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <polygon points="14,2 26,8 26,20 14,26 2,20 2,8" />
+  </svg>
+);
+
+const IconQuarterCircle = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M4 24V4a20 20 0 0 1 20 20H4z" />
+  </svg>
+);
+
+// Casement Specific Icons
+const IconCasementDouble = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="2" y="4" width="11" height="20" />
+    <rect x="15" y="4" width="11" height="20" />
+  </svg>
+);
+
+const IconCasementArchDouble = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M2 14v10h24V14A12 12 0 0 0 2 14z" />
+    <line x1="14" y1="2" x2="14" y2="24" />
+    <line x1="2" y1="14" x2="26" y2="14" />
+  </svg>
+);
+
+const IconCasementGothic = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <path d="M14 2C8 8 4 12 4 24h20c0-12-4-16-10-22z" />
+  </svg>
+);
+
+const IconCasementCorner = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="14" height="20" />
+    <rect x="18" y="10" width="8" height="14" />
+    <line x1="18" y1="10" x2="24" y2="6" />
+    <line x1="18" y1="24" x2="24" y2="20" />
+  </svg>
+);
+
+// Filling Icons
+const IconFillHatch = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="20" height="20" />
+    <line x1="4" y1="24" x2="24" y2="4" />
+    <line x1="4" y1="18" x2="18" y2="4" />
+    <line x1="4" y1="12" x2="12" y2="4" />
+    <line x1="10" y1="24" x2="24" y2="10" />
+    <line x1="16" y1="24" x2="24" y2="16" />
+  </svg>
+);
+
+const IconFillMesh = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="20" height="20" />
+    <line x1="4" y1="24" x2="24" y2="4" />
+    <line x1="4" y1="14" x2="14" y2="4" />
+    <line x1="14" y1="24" x2="24" y2="14" />
+    
+    <line x1="4" y1="4" x2="24" y2="24" />
+    <line x1="4" y1="14" x2="14" y2="24" />
+    <line x1="14" y1="4" x2="24" y2="14" />
+  </svg>
+);
+
+const IconFillDiamond = () => (
+  <svg viewBox="0 0 28 28" className="w-full h-full stroke-current fill-none stroke-[1.5]">
+    <rect x="4" y="4" width="20" height="20" />
+    <polygon points="14,4 24,14 14,24 4,14" />
+    <polygon points="14,8 20,14 14,20 8,14" />
+  </svg>
+);
+
+
+type Category = {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  items: PaletteItem[];
+};
+
+const CATEGORIES: Category[] = [
+  {
+    id: 'cursor',
+    label: 'Cursor',
+    icon: <MousePointer2 size={20} strokeWidth={1.5} />,
+    items: [] // No items, just selects cursor
+  },
+  {
+    id: 'shapes',
+    label: 'Shapes',
+    icon: <CatIconShapes />,
+    items: [
+      { id: 'shape-cursor', type: 'shape', label: 'Cursor', icon: <MousePointer2 size={24} className="m-auto stroke-[1.5]" /> },
+      { id: 'shape-rect', type: 'shape', label: 'Rectangle', icon: <IconRect /> },
+      { id: 'shape-arch', type: 'shape', label: 'Arch', icon: <IconArch /> },
+      { id: 'shape-u', type: 'shape', label: 'U-shape', icon: <IconU /> },
+      { id: 'shape-u-mullion', type: 'shape', label: 'U-mullion', icon: <IconUMullion /> },
+      { id: 'shape-multi-arch', type: 'shape', label: 'Multi-Arch', icon: <IconMultiArch /> },
+      { id: 'shape-grid-4', type: 'shape', label: 'Grid 4', icon: <IconGrid4 /> },
+      { id: 'shape-circle', type: 'shape', label: 'Circle', icon: <IconCircleShape /> },
+      { id: 'shape-d-left', type: 'shape', label: 'D-Left', icon: <IconDLeft /> },
+      { id: 'shape-d-right', type: 'shape', label: 'D-Right', icon: <IconDRight /> },
+      { id: 'shape-pentagon', type: 'shape', label: 'Pentagon', icon: <IconPentagon /> },
+      { id: 'shape-hexagon', type: 'shape', label: 'Hexagon', icon: <IconHexagon /> },
+      { id: 'shape-quarter-circle', type: 'shape', label: 'Quarter Circle', icon: <IconQuarterCircle /> },
+      { id: 'shape-triangle', type: 'shape', label: 'Triangle', icon: <IconTriangle /> },
+      { id: 'shape-diamond', type: 'shape', label: 'Diamond', icon: <IconDiamond /> },
+      { id: 'shape-trapezoid', type: 'shape', label: 'Trapezoid', icon: <IconTrapezoid /> },
+    ]
+  },
+  {
+    id: 'casement',
+    label: 'Casement',
+    icon: <CatIconCasement />,
+    items: [
+      { id: 'casement-single', type: 'shape', label: 'Single', icon: <IconRect /> },
+      { id: 'casement-double', type: 'shape', label: 'Double', icon: <IconCasementDouble /> },
+      { id: 'casement-arch-double', type: 'shape', label: 'Arch Double', icon: <IconCasementArchDouble /> },
+      { id: 'casement-gothic', type: 'shape', label: 'Gothic', icon: <IconCasementGothic /> },
+      { id: 'casement-corner', type: 'shape', label: 'Corner', icon: <IconCasementCorner /> },
+      { id: 'casement-grid', type: 'shape', label: 'Grid', icon: <IconGrid4 /> },
+    ]
+  },
+  {
+    id: 'sliding',
+    label: 'Sliding',
+    icon: <CatIconSliding />,
+    items: [
+      { id: 'sliding-2', type: 'shape', label: '2 Panel', icon: <IconCasementDouble /> },
+      { id: 'sliding-3', type: 'shape', label: '3 Panel', icon: <IconCasementDouble /> },
+    ]
+  },
+  {
+    id: 'slide_fold',
+    label: 'Slide & Fold',
+    icon: <CatIconSlideFold />,
+    items: []
+  },
+  {
+    id: 'grid',
+    label: 'Grid',
+    icon: <CatIconGrid />,
+    items: []
+  },
+  {
+    id: 'bay',
+    label: 'Bay',
+    icon: <CatIconBay />,
+    items: []
+  },
+  {
+    id: 'arch',
+    label: 'Arch',
+    icon: <CatIconArch />,
+    items: []
+  },
+  {
+    id: 'circle',
+    label: 'Circle',
+    icon: <CatIconCircle />,
+    items: []
+  },
+  {
+    id: 'specialty',
+    label: 'Specialty',
+    icon: <CatIconSpecialty />,
+    items: []
+  },
+  {
+    id: 'fillings',
+    label: 'Fillings',
+    icon: <CatIconFillings />,
+    items: [
+      { id: 'filling-hatch', type: 'filling', label: 'Hatch', icon: <IconFillHatch /> },
+      { id: 'filling-mesh', type: 'filling', label: 'Mesh', icon: <IconFillMesh /> },
+      { id: 'filling-diamond', type: 'filling', label: 'Diamond', icon: <IconFillDiamond /> },
+    ]
+  },
+  {
+    id: 'more',
+    label: 'More',
+    icon: <MoreHorizontal size={20} strokeWidth={1.5} />,
+    items: []
+  }
+];
+
+export default function DraggableShapePalette({ 
+  onSelectItem, 
+  onOpenQuote, 
+  onOpen3D 
+}: DraggableShapePaletteProps) {
+  const [activeCategory, setActiveCategory] = useState<string>('shapes');
   const [isSubPaletteOpen, setIsSubPaletteOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'draw' | 'quote'>('draw');
-  const [draggedItem, setDraggedItem] = useState<DraggableItemType | null>(null);
 
-  const handleDragStart = (e: React.DragEvent, item: PaletteItem) => {
-    setDraggedItem(item.id);
-    e.dataTransfer.setData('application/json', JSON.stringify(item));
+  const currentCategory = CATEGORIES.find(c => c.id === activeCategory);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: PaletteItem) => {
     e.dataTransfer.setData('text/plain', item.id);
-    e.dataTransfer.effectAllowed = 'copyMove';
+    e.dataTransfer.effectAllowed = 'copy';
   };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-  };
-
-  // Quick primary items for the outer strip
-  const outerStripTools: Array<{ id: string; label: string; action: () => void; icon: React.ReactNode }> = [
-    {
-      id: 'catalog',
-      label: 'Templates',
-      action: onOpenCatalog,
-      icon: (
-        <span className="font-black text-blue-600 text-base leading-none">•••</span>
-      ),
-    },
-    {
-      id: 'rect1',
-      label: '1-Panel Window',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_rect_1');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <rect x="3" y="3" width="18" height="18" rx="1.5" />
-        </svg>
-      ),
-    },
-    {
-      id: 'rect2',
-      label: '2-Panel Sliding',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_rect_2');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <rect x="3" y="3" width="18" height="18" rx="1.5" />
-          <line x1="12" y1="3" x2="12" y2="21" />
-        </svg>
-      ),
-    },
-    {
-      id: 'rect3',
-      label: '3-Panel Multi-Track',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_rect_3');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <rect x="2" y="3" width="20" height="18" rx="1.5" />
-          <line x1="8.6" y1="3" x2="8.6" y2="21" />
-          <line x1="15.3" y1="3" x2="15.3" y2="21" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mullion',
-      label: 'Vertical Mullion',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'mullion_vertical');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <rect x="3" y="3" width="18" height="18" rx="1.5" strokeDasharray="2 2" />
-          <line x1="12" y1="3" x2="12" y2="21" strokeWidth="3" />
-        </svg>
-      ),
-    },
-    {
-      id: 'transom',
-      label: 'Horizontal Transom',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'transom_horizontal');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <rect x="3" y="3" width="18" height="18" rx="1.5" strokeDasharray="2 2" />
-          <line x1="3" y1="12" x2="21" y2="12" strokeWidth="3" />
-        </svg>
-      ),
-    },
-    {
-      id: 'arch',
-      label: 'Arch Window / Head',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_arch_round');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-purple-600 fill-none stroke-[2]">
-          <path d="M4 21 V12 A8 8 0 0 1 20 12 V21 Z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'gothic',
-      label: 'Gothic Pointed Arch',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_arch_gothic');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-purple-600 fill-none stroke-[2]">
-          <path d="M4 21 V12 Q4 3 12 2 Q20 3 20 12 V21 Z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'circle',
-      label: 'Circular Bullseye',
-      action: () => {
-        const item = PALETTE_ITEMS.find((p) => p.id === 'shape_circle');
-        if (item) onSelectItem(item);
-      },
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5 stroke-slate-700 fill-none stroke-[2]">
-          <circle cx="12" cy="12" r="9" />
-          <line x1="12" y1="3" x2="12" y2="21" strokeDasharray="2 1" />
-          <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 1" />
-        </svg>
-      ),
-    },
-  ];
 
   return (
-    <div className="relative z-20 flex h-full select-none shrink-0 font-sans shadow-md border-r border-slate-200">
-      {/* 1. TIER 1: OUTER NARROW TOOL STRIP (Matching WindoorCraft wc_07_shape1.png) */}
-      <div className="w-12 bg-white border-r border-slate-200 flex flex-col justify-between items-center py-2 shrink-0">
-        {/* Top Tools */}
-        <div className="flex flex-col items-center gap-1.5 w-full">
-          {outerStripTools.map((tool) => (
+    <div className="flex h-full select-none z-10 font-sans">
+      
+      {/* Tier 1: Primary Vertical Strip */}
+      <div className="flex flex-col w-[36px] bg-white border-r border-slate-200 py-2 items-center flex-shrink-0 z-20">
+        <div className="flex-1 w-full flex flex-col gap-1 items-center overflow-y-auto hide-scrollbar pb-2">
+          {CATEGORIES.map(cat => (
             <button
-              key={tool.id}
-              type="button"
-              onClick={tool.action}
-              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer"
-              title={tool.label}
+              key={cat.id}
+              onClick={() => {
+                setActiveCategory(cat.id);
+                if (cat.items.length > 0) setIsSubPaletteOpen(true);
+              }}
+              title={cat.label}
+              className={`w-[32px] h-[32px] flex items-center justify-center rounded transition-colors ${
+                activeCategory === cat.id 
+                  ? 'bg-blue-50 text-blue-600' 
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
             >
-              {tool.icon}
+              {cat.icon}
             </button>
           ))}
         </div>
-
-        {/* Bottom-Left Vertical Tabs: 'quote' and 'draw' (Exact WindoorCraft styling) */}
-        <div className="flex flex-col items-center gap-2 w-full pt-4 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('quote');
-              if (onOpenQuote) onOpenQuote();
-            }}
-            className="w-7 py-2.5 rounded-r bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold shadow-xs transition-all flex flex-col items-center justify-center cursor-pointer"
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-            title="Open Cost & Cutting List Quotation"
-          >
-            quote
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('draw')}
-            className={`w-7 py-3 rounded-r text-[11px] font-bold shadow-xs transition-all flex flex-col items-center justify-center cursor-pointer ${
-              activeTab === 'draw'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-            }`}
-            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-            title="Active 2D CAD Design Canvas"
-          >
-            draw
-          </button>
+        
+        {/* Bottom Actions */}
+        <div className="w-full flex flex-col items-center mt-2 border-t border-slate-200 pt-2 gap-2">
+          {onOpenQuote && (
+            <button 
+              onClick={onOpenQuote}
+              className="w-[28px] h-[70px] bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center"
+              title="Quote"
+            >
+              <span className="text-[11px] font-medium tracking-wider" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                QUOTE
+              </span>
+            </button>
+          )}
+          {onOpen3D && (
+            <button 
+              onClick={onOpen3D}
+              className="w-[28px] h-[70px] bg-slate-100 text-slate-700 border border-slate-200 rounded hover:bg-slate-200 transition-colors flex items-center justify-center mb-2"
+              title="Draw / 3D"
+            >
+              <span className="text-[11px] font-medium tracking-wider" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                DRAW
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 2. TIER 2: SECONDARY SHAPE PALETTE (Collapsible with '<' chevron toggle) */}
-      {isSubPaletteOpen && (
-        <div className="w-28 sm:w-32 bg-[#fafafa] flex flex-col border-r border-slate-200 transition-all duration-150 overflow-hidden">
-          {/* Header with '<' Collapse chevron */}
-          <div className="h-9 px-2 border-b border-slate-200 flex items-center justify-between bg-white">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Shapes
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsSubPaletteOpen(false)}
-              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              title="Collapse Secondary Palette"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick Shape Palette Grid (Icon-only) */}
-          <div className="flex-1 overflow-y-auto p-1.5 space-y-1.5">
-            <div className="grid grid-cols-2 gap-1.5">
-              {PALETTE_ITEMS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => onSelectItem(item)}
-                  className={`group relative flex items-center justify-center w-11 h-11 mx-auto rounded-lg border border-slate-200 bg-white hover:border-blue-500 hover:bg-blue-50/50 hover:shadow-xs cursor-grab active:cursor-grabbing transition-all text-slate-700 hover:text-blue-600 ${
-                    draggedItem === item.id ? 'opacity-40 ring-2 ring-blue-500' : ''
-                  }`}
-                  title={`${item.name} — ${item.description} (Drag or Click to Apply)`}
-                >
-                  <div className="transition-transform group-hover:scale-110">
-                    {item.iconSvg}
-                  </div>
-                </button>
-              ))}
+      {/* Tier 2: Secondary Expandable Grid */}
+      <div 
+        className={`relative bg-[#fafafa] border-r border-slate-200 transition-all duration-300 ease-in-out flex flex-col ${
+          isSubPaletteOpen ? 'w-[130px]' : 'w-[4px] min-w-[4px] cursor-e-resize hover:bg-blue-300'
+        }`}
+        onClick={() => !isSubPaletteOpen && setIsSubPaletteOpen(true)}
+      >
+        {isSubPaletteOpen && currentCategory && (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-end p-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsSubPaletteOpen(false); }}
+                className="w-[24px] h-[24px] flex items-center justify-center text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200"
+              >
+                <ChevronLeft size={16} />
+              </button>
             </div>
-          </div>
-        </div>
-      )}
+            
+            {/* Grid */}
+            <div className="flex-1 overflow-y-auto px-2 pb-4 hide-scrollbar">
+              {currentCategory.items.length > 0 ? (
+                <div className="grid grid-cols-3 gap-1">
+                  {currentCategory.items.map((item) => (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      onClick={() => onSelectItem(item)}
+                      title={item.label}
+                      className="aspect-square bg-white border border-slate-200 rounded flex items-center justify-center text-slate-700 hover:text-blue-600 hover:border-blue-300 hover:shadow-sm cursor-grab active:cursor-grabbing hover:scale-105 transition-all p-1"
+                    >
+                      {item.icon}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-400 text-center mt-4 px-1">
+                  No items in this category
+                </div>
+              )}
+            </div>
 
-      {/* Expand button if collapsed */}
-      {!isSubPaletteOpen && (
-        <div className="w-4 bg-slate-100 hover:bg-slate-200 border-r border-slate-200 flex items-center justify-center cursor-pointer transition-colors"
-             onClick={() => setIsSubPaletteOpen(true)}
-             title="Expand Shapes Palette">
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-        </div>
-      )}
+            {/* Bottom Gear */}
+            <div className="p-2 flex justify-center border-t border-slate-200">
+              <button className="text-slate-400 hover:text-slate-700">
+                <Settings size={16} />
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Global styles for hide-scrollbar */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}} />
     </div>
   );
-};
-
+}

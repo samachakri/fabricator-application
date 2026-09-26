@@ -130,8 +130,8 @@ export function createBlankWindowDesign(
     name,
     projectId,
     windowType: 'Sliding Window',
-    width: 1800,
-    height: 1200,
+    width: 0,
+    height: 0,
     quantity: 1,
     unit: 'MM',
 
@@ -180,10 +180,10 @@ export function convertToParametricDesign(
     }
   }
 
-  // Otherwise construct a default 2-panel sliding design (1800 x 1500)
-  const base = createDefaultWindowDesign(legacy.id, legacy.name || legacy.id, projectId);
-  base.width = legacy.width || 1800;
-  base.height = legacy.height || 1500;
+  // Otherwise construct a blank design (empty canvas) — user drags shapes to populate
+  const base = createBlankWindowDesign(legacy.id, legacy.name || legacy.id, projectId);
+  base.width = legacy.width || 0;
+  base.height = legacy.height || 0;
   base.quantity = legacy.quantity || 1;
   base.profileBrand = (legacy.profileBrand as any) || 'VEKA';
 

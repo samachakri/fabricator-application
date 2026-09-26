@@ -8,15 +8,22 @@ import { ParametricWindowDesign, WindowComponentType } from '@/lib/design/types'
 import {
   convertToParametricDesign,
   convertToStoreWindowDesign,
-  createDefaultWindowDesign,
+  createBlankWindowDesign,
 } from '@/lib/design/default-design';
-import { DesignHeader } from '@/components/design/DesignHeader';
-import { DesignWindowTabs } from '@/components/design/DesignWindowTabs';
 import { ParametricDesignCanvas } from '@/components/design/ParametricDesignCanvas';
 import { ContextualConfigPanel } from '@/components/design/ContextualConfigPanel';
 import { AddComponentAction } from '@/components/design/AddComponentMenu';
-import { DesignWelcomeModal } from '@/components/design/DesignWelcomeModal';
-import { MultipleCopiesModal } from '@/components/design/MultipleCopiesModal';
+import {
+  Undo2,
+  Redo2,
+  Trash2,
+  Sparkles,
+  Save,
+  Check,
+  Box,
+  X,
+  Layers,
+} from 'lucide-react';
 
 export default function WindowDesignerPage() {
   const params = useParams();
@@ -48,20 +55,14 @@ export default function WindowDesignerPage() {
     type: WindowComponentType;
     id: string;
     subId?: string;
-  } | null>({
-    type: 'frame',
-    id: 'frame-outer',
-  });
+  } | null>(null);
 
   // Save status indicator
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Modal dialog states
-  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
-  const [isMultipleCopiesOpen, setIsMultipleCopiesOpen] = useState(false);
-  // Configuration panel state (open by default: Left 60% Canvas / Right 40% Config Panel)
+  // Configuration panel state (always visible like WindoorCraft)
   const [showConfigPanel, setShowConfigPanel] = useState<boolean>(true);
 
   // Initialize or update parametric design when project or window changes
@@ -70,8 +71,8 @@ export default function WindowDesignerPage() {
       const created = addWindow(projectId, {
         name: 'W01',
         type: 'sliding_3track',
-        width: 1800,
-        height: 1200,
+        width: 0,
+        height: 0,
       });
       if (created && created.id !== windowId) {
         router.replace(`/projects/${projectId}/design/${created.id}`);
@@ -81,7 +82,6 @@ export default function WindowDesignerPage() {
 
     if (rawWindow) {
       const parsed = convertToParametricDesign(rawWindow, projectId);
-      // Ensure window id matches route
       parsed.id = rawWindow.id;
       parsed.name = rawWindow.name || rawWindow.id;
       setDesign(parsed);
@@ -142,6 +142,36 @@ export default function WindowDesignerPage() {
     }, 400);
   }, [design, projectId, windowId, updateWindow]);
 
+  // Delete / Clear Canvas
+  const handleDeleteCanvas = useCallback(() => {
+    if (!design) return;
+    handleUpdateDesign({
+      ...design,
+      panels: [],
+      mullions: [],
+      transoms: [],
+      hasArch: false,
+      archHeight: 0,
+      width: 0,
+      height: 0,
+    });
+    setSelectedComponent(null);
+  }, [design, handleUpdateDesign]);
+
+  // Clean: Reset to defaults but keep dimensions
+  const handleCleanCanvas = useCallback(() => {
+    if (!design) return;
+    handleUpdateDesign({
+      ...design,
+      panels: [],
+      mullions: [],
+      transoms: [],
+      hasArch: false,
+      archHeight: 0,
+    });
+    setSelectedComponent(null);
+  }, [design, handleUpdateDesign]);
+
   // Save & Continue to Quotation
   const handleContinueToQuotation = useCallback(() => {
     if (!design) return;
@@ -149,21 +179,6 @@ export default function WindowDesignerPage() {
 
     if (!project?.quotation) {
       generateQuotation(projectId);
-    }
-
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const orderId = urlParams.get('orderId');
-      if (orderId) {
-        const saved = localStorage.getItem('fabricator_pro_in_progress_designs');
-        if (saved) {
-          const inProg: string[] = JSON.parse(saved);
-          const filtered = inProg.filter((id) => id !== orderId);
-          localStorage.setItem('fabricator_pro_in_progress_designs', JSON.stringify(filtered));
-        }
-      }
-    } catch (e) {
-      console.error(e);
     }
 
     router.push(`/projects/${projectId}/quotation`);
@@ -176,7 +191,6 @@ export default function WindowDesignerPage() {
       const updated = { ...design };
 
       if (action === 'add_vertical_division' || action === 'add_mullion') {
-        // Split panels further or add a mullion
         const count = updated.panels.length + 1;
         const newPanels = [];
         const newMullions = [];
@@ -213,7 +227,6 @@ export default function WindowDesignerPage() {
           handleUpdateDesign(updated);
         }
       } else if (action === 'add_sash' || action === 'add_sliding_panel') {
-        // Change fixed panels to sliding
         const modifiedPanels = updated.panels.map((p) => {
           if (p.panelType === 'fixed') {
             return {
@@ -242,10 +255,7 @@ export default function WindowDesignerPage() {
         updated.panels = modifiedPanels;
         handleUpdateDesign(updated);
       } else if (action === 'add_mesh') {
-        updated.defaultMesh = {
-          type: 'Fiberglass',
-          ratePerSqFt: 60,
-        };
+        updated.defaultMesh = { type: 'Fiberglass', ratePerSqFt: 60 };
         handleUpdateDesign(updated);
       } else if (action === 'add_glass') {
         setSelectedComponent({ type: 'glass', id: 'glass-02' });
@@ -253,71 +263,6 @@ export default function WindowDesignerPage() {
     },
     [design, handleUpdateDesign]
   );
-
-  // Switch to another window in the project
-  const handleSelectWindow = (id: string) => {
-    if (isSaved) {
-      router.push(`/projects/${projectId}/design/${id}`);
-    } else {
-      handleSaveDesign();
-      router.push(`/projects/${projectId}/design/${id}`);
-    }
-  };
-
-  // Add new window to project
-  const handleAddWindow = () => {
-    if (!project) return;
-    const nextIndex = project.windows.length + 1;
-    const windowTag = `W0${nextIndex}`;
-    const newWin = addWindow(projectId, {
-      name: windowTag,
-      type: 'sliding_2track',
-      width: 1800,
-      height: 1200,
-      notes: '',
-    });
-    if (newWin) {
-      router.push(`/projects/${projectId}/design/${newWin.id}`);
-    }
-  };
-
-  // Delete window from project
-  const handleDeleteWindow = (targetId: string) => {
-    if (!project) return;
-    if (project.windows.length <= 1) {
-      alert('At least one window is required for this project.');
-      return;
-    }
-    const targetWin = project.windows.find((w) => w.id === targetId);
-    const winLabel = targetWin?.id || targetId;
-    if (confirm(`Are you sure you want to delete window ${winLabel}?`)) {
-      deleteWindow(projectId, targetId);
-      const remaining = project.windows.filter((w) => w.id !== targetId);
-      if (remaining.length > 0) {
-        router.push(`/projects/${projectId}/design/${remaining[0].id}`);
-      }
-    }
-  };
-
-  // Handle batch copies replication
-  const handleBatchCreateCopies = (copies: { tag: string; room: string; width: number; height: number; qty: number }[]) => {
-    if (!project || !design) return;
-    let lastCreatedId: string | null = null;
-
-    copies.forEach((copy) => {
-      const created = addWindow(projectId, {
-        name: copy.tag,
-        type: (rawWindow?.type || 'sliding_3track') as any,
-        width: copy.width,
-        height: copy.height,
-      });
-      if (created) lastCreatedId = created.id;
-    });
-
-    if (lastCreatedId) {
-      router.push(`/projects/${projectId}/design/${lastCreatedId}`);
-    }
-  };
 
   if (!project) {
     return (
@@ -341,55 +286,148 @@ export default function WindowDesignerPage() {
       <div className="flex flex-col items-center justify-center min-h-[70vh] text-center p-6">
         <div className="w-12 h-12 border-4 border-[#1B64F2] border-t-transparent rounded-full animate-spin mb-4" />
         <h3 className="text-base font-bold text-slate-800">
-          Loading Parametric Design Engine...
+          Loading Design Engine...
         </h3>
-        <p className="text-xs text-slate-500 mt-1">
-          Initializing SVG geometry, component profiles, and real-time BOM calculations.
-        </p>
       </div>
     );
   }
 
-  const allWindowIds = project.windows.map((w) => w.id);
-  const tabItems = project.windows.map((w) => ({
-    id: w.id,
-    name: w.id,
-  }));
+  const hasElements = (design.panels || []).length > 0 || Boolean(design.hasArch);
+  const areaSqM = design.width > 0 && design.height > 0
+    ? ((design.width * design.height) / 1_000_000).toFixed(4)
+    : '0.0000';
+  const openingsCount = (design.panels || []).length;
+  const seriesName = design.seriesName || 'S_CRAFT_PREMIUM_SLIDING_SERIES';
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] min-h-[680px] bg-slate-100 overflow-hidden font-sans">
-      {/* 1. Header (50-60px): Project name, Undo/Redo, Save, Sidebar toggle */}
-      <DesignHeader
-        projectName={project.name}
-        windowId={design.id}
-        allWindowIds={allWindowIds}
-        onSelectWindow={handleSelectWindow}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onSave={handleSaveDesign}
-        isSaved={isSaved}
-        isConfigPanelOpen={showConfigPanel}
-        onToggleConfigPanel={() => setShowConfigPanel(!showConfigPanel)}
-      />
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] min-h-[680px] bg-white overflow-hidden font-sans">
+      {/* ================================================================= */}
+      {/* 1. WINDOORCRAFT TOP TOOLBAR                                       */}
+      {/* ================================================================= */}
+      <header className="h-auto bg-white border-b border-slate-200 select-none z-30 shrink-0">
+        {/* Row 1: Logo + Toolbar Actions */}
+        <div className="h-11 px-3 flex items-center justify-between border-b border-slate-100">
+          {/* Left: Logo */}
+          <Link
+            href="/design"
+            className="flex items-center gap-2 group shrink-0"
+            title="Back to Design Queue"
+          >
+            <div className="w-7 h-7 rounded bg-[#1B64F2] text-white flex items-center justify-center shadow-xs group-hover:bg-[#1652C7] transition-colors">
+              <Layers className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-extrabold text-sm text-slate-900 tracking-tight hidden sm:inline">
+              Design Studio
+            </span>
+          </Link>
 
-      {/* 2. Window Switcher Tabs: W01, W02, W03, etc. */}
-      <DesignWindowTabs
-        tabs={tabItems}
-        activeWindowId={design.id}
-        onSelectTab={handleSelectWindow}
-        onAddWindow={handleAddWindow}
-        onDeleteTab={handleDeleteWindow}
-      />
+          {/* Center: WindoorCraft Action Buttons */}
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded disabled:opacity-30 transition-colors cursor-pointer"
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">undo</span>
+            </button>
 
-      {/* 3. Main Workspace: LEFT Canvas (Full width or 60%) / RIGHT Collapsible Config Panel */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left: Parametric CAD Canvas */}
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded disabled:opacity-30 transition-colors cursor-pointer"
+              title="Redo (Ctrl+Y)"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">redo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteCanvas}
+              disabled={!hasElements}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-30 transition-colors cursor-pointer"
+              title="Delete all elements from canvas"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">delete</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCleanCanvas}
+              disabled={!hasElements}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded disabled:opacity-30 transition-colors cursor-pointer"
+              title="Clean canvas (reset panels, keep frame)"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">clean</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveDesign}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+              title="Save design (Ctrl+S)"
+            >
+              {isSaved ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="hidden sm:inline text-emerald-600">save</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">save</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Right: 3D toggle + Close */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowConfigPanel(!showConfigPanel)}
+              className={`px-2 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                showConfigPanel
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Toggle inspector panel"
+            >
+              <Box className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">3D</span>
+            </button>
+
+            <Link
+              href={`/projects/${projectId}`}
+              className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Close design and return to project"
+            >
+              <X className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Row 2: Series Breadcrumb (red text, centered) */}
+        <div className="h-7 flex items-center justify-center bg-white">
+          <span className="text-xs font-medium text-red-500 font-mono tracking-wide">
+            {seriesName}/{areaSqM}m²/{openingsCount} openings
+          </span>
+        </div>
+      </header>
+
+      {/* ================================================================= */}
+      {/* 2. MAIN WORKSPACE: Canvas (left) + Config Panel (right)           */}
+      {/* ================================================================= */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Parametric CAD Canvas (includes DraggableShapePalette inside) */}
         <div
-          className={`w-full ${
-            showConfigPanel ? 'lg:w-[60%]' : 'lg:w-full'
-          } h-full relative overflow-hidden bg-[#090D16] flex flex-col transition-all duration-200`}
+          className={`flex-1 h-full relative overflow-hidden bg-white flex flex-col transition-all duration-200`}
         >
           <ParametricDesignCanvas
             design={design}
@@ -418,9 +456,9 @@ export default function WindowDesignerPage() {
           />
         </div>
 
-        {/* Right: Collapsible Contextual Configuration & Pricing Panel */}
+        {/* Right: WindoorCraft Config Panel (always visible, order/color tabs) */}
         {showConfigPanel && (
-          <div className="w-full lg:w-[40%] h-full overflow-hidden flex flex-col border-l border-slate-700 bg-white transition-all duration-200 shadow-2xl z-20">
+          <div className="w-[320px] lg:w-[340px] h-full overflow-hidden flex flex-col border-l border-slate-200 bg-white transition-all duration-200 shrink-0 z-20">
             <ContextualConfigPanel
               design={design}
               selectedComponent={selectedComponent}
@@ -433,29 +471,6 @@ export default function WindowDesignerPage() {
           </div>
         )}
       </div>
-
-      {/* 4. Welcome Setup Modal */}
-      <DesignWelcomeModal
-        isOpen={isWelcomeModalOpen}
-        onClose={() => setIsWelcomeModalOpen(false)}
-        onBrowseCatalog={() => {
-          setIsWelcomeModalOpen(false);
-        }}
-        onStartNew={(defaults) => {
-          handleUpdateDesign({
-            ...design,
-            profileColor: defaults.color,
-          });
-        }}
-      />
-
-      {/* 5. Multiple Copies / Batch Replication Modal */}
-      <MultipleCopiesModal
-        isOpen={isMultipleCopiesOpen}
-        onClose={() => setIsMultipleCopiesOpen(false)}
-        baseDesign={design}
-        onBatchCreate={handleBatchCreateCopies}
-      />
     </div>
   );
 }

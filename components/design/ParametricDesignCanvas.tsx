@@ -10,7 +10,7 @@ import {
   OpeningDirectionType,
 } from '@/lib/design/types';
 import { AddComponentAction } from './AddComponentMenu';
-import { DraggableShapePalette, PaletteItem } from './DraggableShapePalette';
+import DraggableShapePalette, { PaletteItem } from './DraggableShapePalette';
 import { Precision3DView } from './Precision3DView';
 import { DesignCatalogModal, CatalogTemplate } from './DesignCatalogModal';
 import { ArchitecturalSheetModal } from './ArchitecturalSheetModal';
@@ -780,10 +780,7 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
       {/* 1. Left Docked WindoorCraft Two-Tier Shape & Element Palette */}
       <DraggableShapePalette
         onSelectItem={(item) => applyElementToCanvas(item.id)}
-        onOpenCatalog={() => setIsCatalogOpen(true)}
         onOpenQuote={() => setIsQuoteOpen(true)}
-        activeTool={activeTool}
-        onSelectTool={(tool) => setActiveTool(tool)}
       />
 
       {/* 2. Main Precision CAD Canvas Area (Clean Architectural Light Theme) */}
@@ -910,177 +907,33 @@ export const ParametricDesignCanvas: React.FC<ParametricDesignCanvasProps> = ({
         {/* BLANK STATE: CLEAN CAD BLUEPRINT LAYOUT                      */}
         {/* ------------------------------------------------------------- */}
         {!hasElements ? (
-          <div className="w-full h-full flex flex-col items-center justify-center relative p-8">
-            <svg
-              viewBox={`0 0 ${vbWidth} ${vbHeight}`}
-              className="max-w-full max-h-[85vh] transition-transform duration-200 drop-shadow-2xl select-none"
-              style={{ transform: `scale(${zoomLevel / 100})` }}
-            >
-              <defs>
-                <pattern id="emptyCadGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" strokeWidth="0.8" opacity="0.4" />
-                </pattern>
-              </defs>
-              <rect width={vbWidth} height={vbHeight} fill="url(#emptyCadGrid)" />
-
-              {/* Blank Window Blueprint Plan Area */}
-              <rect
-                x={winX}
-                y={winY}
-                width={width}
-                height={height}
-                fill="#0b1329"
-                stroke="#38bdf8"
-                strokeWidth="2"
-                strokeDasharray="8 6"
-                rx="8"
-                opacity="0.85"
-              />
-
-              {/* Center Crosshairs */}
-              <line
-                x1={winX + width / 2 - 40}
-                y1={winY + height / 2}
-                x2={winX + width / 2 + 40}
-                y2={winY + height / 2}
-                stroke="#38bdf8"
-                strokeWidth="1.5"
-                opacity="0.4"
-              />
-              <line
-                x1={winX + width / 2}
-                y1={winY + height / 2 - 40}
-                x2={winX + width / 2}
-                y2={winY + height / 2 + 40}
-                stroke="#38bdf8"
-                strokeWidth="1.5"
-                opacity="0.4"
-              />
-
-              {/* Top Width Dimension */}
-              <line x1={winX} y1={winY - 45} x2={winX + width} y2={winY - 45} stroke="#38bdf8" strokeWidth="2" />
-              <line x1={winX} y1={winY - 55} x2={winX} y2={winY - 35} stroke="#38bdf8" strokeWidth="2" />
-              <line x1={winX + width} y1={winY - 55} x2={winX + width} y2={winY - 35} stroke="#38bdf8" strokeWidth="2" />
-              <text
-                x={winX + width / 2}
-                y={winY - 55}
-                textAnchor="middle"
-                fill="#38bdf8"
-                fontSize="18"
-                fontFamily="monospace"
-                fontWeight="bold"
-                className="cursor-pointer hover:underline"
-                onClick={() => setIsEditingWidth(true)}
-              >
-                {width} mm
-              </text>
-
-              {/* Left Height Dimension */}
-              <line x1={winX - 45} y1={winY} x2={winX - 45} y2={winY + height} stroke="#38bdf8" strokeWidth="2" />
-              <line x1={winX - 55} y1={winY} x2={winX - 35} y2={winY} stroke="#38bdf8" strokeWidth="2" />
-              <line x1={winX - 55} y1={winY + height} x2={winX - 35} y2={winY + height} stroke="#38bdf8" strokeWidth="2" />
-              <text
-                x={winX - 55}
-                y={winY + height / 2}
-                textAnchor="middle"
-                fill="#38bdf8"
-                fontSize="18"
-                fontFamily="monospace"
-                fontWeight="bold"
-                transform={`rotate(-90 ${winX - 55} ${winY + height / 2})`}
-                className="cursor-pointer hover:underline"
-                onClick={() => setIsEditingHeight(true)}
-              >
-                {height} mm
-              </text>
-
-              {/* Interactive Quick-Add Options on Empty Canvas */}
-              <g transform={`translate(${winX + width / 2}, ${winY + height / 2 - 50})`}>
-                <text
-                  x="0"
-                  y="-15"
-                  textAnchor="middle"
-                  fill="#94a3b8"
-                  fontSize="15"
-                  fontFamily="sans-serif"
-                  fontWeight="bold"
-                >
-                  Canvas Cleared • Select a Window Configuration or Drag from Palette:
-                </text>
-
-                <g transform="translate(-255, 20)">
-                  {/* Option 1: 2-Panel Sliding */}
-                  <g
-                    className="cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      applyElementToCanvas('shape_rect_2');
-                    }}
-                  >
-                    <rect width="160" height="52" rx="10" fill="#1e1b4b" stroke="#6366f1" strokeWidth="1.5" className="group-hover:fill-indigo-900 transition-colors" />
-                    <text x="80" y="24" fill="#e0e7ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ 2-Panel Sliding</text>
-                    <text x="80" y="41" fill="#818cf8" fontSize="10" textAnchor="middle">2-Track Window (Standard)</text>
-                  </g>
-
-                  {/* Option 2: 3-Panel Sliding */}
-                  <g
-                    transform="translate(175, 0)"
-                    className="cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      applyElementToCanvas('shape_rect_3');
-                    }}
-                  >
-                    <rect width="160" height="52" rx="10" fill="#1e1b4b" stroke="#6366f1" strokeWidth="1.5" className="group-hover:fill-indigo-900 transition-colors" />
-                    <text x="80" y="24" fill="#e0e7ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ 3-Panel Sliding</text>
-                    <text x="80" y="41" fill="#818cf8" fontSize="10" textAnchor="middle">3-Track System</text>
-                  </g>
-
-                  {/* Option 3: Arch Combination */}
-                  <g
-                    transform="translate(350, 0)"
-                    className="cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      applyElementToCanvas('shape_arch_round');
-                      applyElementToCanvas('shape_rect_2');
-                    }}
-                  >
-                    <rect width="160" height="52" rx="10" fill="#3b0764" stroke="#c084fc" strokeWidth="1.5" className="group-hover:fill-purple-950 transition-colors" />
-                    <text x="80" y="24" fill="#f3e8ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ Arch Combination</text>
-                    <text x="80" y="41" fill="#c084fc" fontSize="10" textAnchor="middle">Arch + 2-Door Window</text>
-                  </g>
-
-                  {/* Option 4: Gothic Arch Head */}
-                  <g
-                    transform="translate(85, 68)"
-                    className="cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      applyElementToCanvas('shape_arch_gothic');
-                    }}
-                  >
-                    <rect width="160" height="46" rx="10" fill="#3b0764" stroke="#c084fc" strokeWidth="1.5" className="group-hover:fill-purple-950 transition-colors" />
-                    <text x="80" y="22" fill="#f3e8ff" fontSize="12" fontWeight="bold" textAnchor="middle">+ Gothic Arch Head</text>
-                    <text x="80" y="36" fill="#c084fc" fontSize="10" textAnchor="middle">Pointed Architectural</text>
-                  </g>
-
-                  {/* Option 5: 1-Panel Casement */}
-                  <g
-                    transform="translate(265, 68)"
-                    className="cursor-pointer group"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      applyElementToCanvas('shape_rect_1');
-                    }}
-                  >
-                    <rect width="160" height="46" rx="10" fill="#0f172a" stroke="#475569" strokeWidth="1.5" className="group-hover:fill-slate-800 transition-colors" />
-                    <text x="80" y="22" fill="#f8fafc" fontSize="12" fontWeight="bold" textAnchor="middle">+ 1-Panel Casement</text>
-                    <text x="80" y="36" fill="#94a3b8" fontSize="10" textAnchor="middle">Fixed or Hinged</text>
-                  </g>
-                </g>
-              </g>
-            </svg>
+          <div
+            className="w-full h-full flex flex-col items-center justify-center relative"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const itemId = e.dataTransfer.getData('text/plain');
+              applyElementToCanvas(itemId);
+            }}
+          >
+            {/* Clean white empty canvas matching WindoorCraft */}
+            <div className="flex flex-col items-center justify-center gap-4 text-slate-400">
+              {/* Subtle crosshair icon */}
+              <svg viewBox="0 0 64 64" className="w-16 h-16 stroke-slate-300 fill-none stroke-[1]">
+                <line x1="32" y1="8" x2="32" y2="56" strokeDasharray="4 3" />
+                <line x1="8" y1="32" x2="56" y2="32" strokeDasharray="4 3" />
+                <circle cx="32" cy="32" r="6" />
+              </svg>
+              <p className="text-sm font-medium text-slate-400">
+                Drag a shape from the left palette to start designing
+              </p>
+              <p className="text-xs text-slate-300">
+                or click any shape icon to apply directly
+              </p>
+            </div>
           </div>
         ) : viewMode === '3d' ? (
           /* 3D WebGL Engine */
